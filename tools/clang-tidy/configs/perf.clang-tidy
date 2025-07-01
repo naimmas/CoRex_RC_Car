@@ -1,0 +1,12 @@
+
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+ImplementationFileExtensions:
+  - c
+HeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+Checks: >
+  performance-no-int-to-ptr

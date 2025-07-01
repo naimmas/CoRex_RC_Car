@@ -1,0 +1,18 @@
+[tool.commitizen]
+name = "cz_light_gitmoji"
+version_files = []
+version_provider = "commitizen"
+version_scheme = "semver2"
+tag_format = "v$version"
+update_changelog_on_bump = true
+gpg_sign = false
+annotated_tag = false
+retry_after_failure = false
+changelog_file = "CHANGELOG.md"
+use_shortcuts = true
+prerelease_offset = 1
+major_version_zero = false
+pre_bump_hooks = []
+post_bump_hooks = []
+encoding = "utf-8"
+github_repo = "naimmas/Embedded-Project-Template"

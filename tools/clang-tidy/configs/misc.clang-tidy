@@ -1,0 +1,17 @@
+
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+ImplementationFileExtensions:
+  - c
+HeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+  # llvm-header-guard,
+  # misc-include-cleaner,
+Checks: >
+  llvm-include-order,
+  misc-header-include-cycle,
+  misc-misplaced-const,
+  misc-static-assert,

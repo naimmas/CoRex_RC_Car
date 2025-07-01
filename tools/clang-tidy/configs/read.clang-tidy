@@ -1,0 +1,205 @@
+
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+ImplementationFileExtensions:
+  - c
+HeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+Checks: >
+  readability-avoid-nested-conditional-operator,
+  readability-avoid-return-with-void-value,
+  readability-avoid-unconditional-preprocessor-if,
+  readability-braces-around-statements,
+  readability-else-after-return,
+  readability-enum-initial-value,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  readability-identifier-naming,
+  readability-implicit-bool-conversion,
+  readability-inconsistent-declaration-parameter-name,
+  readability-isolate-declaration,
+  readability-make-member-function-const,
+  readability-magic-numbers,
+  readability-math-missing-parentheses,
+  readability-non-const-parameter,
+  readability-simplify-boolean-expr,
+  readability-uppercase-literal-suffix
+
+CheckOptions:
+    # readability-avoid-return-with-void-value options
+  - key: readability-avoid-return-with-void-value.IgnoreMacros
+    value: 'true'
+  - key: readability-avoid-return-with-void-value.StrictMode
+    value: 'true'
+
+  # readability-else-after-return options
+  - key: readability-else-after-return.WarnOnUnfixable
+    value: 'true'
+  - key: readability-else-after-return.WarnOnConditionVariables
+    value: 'true'
+
+  # readability-enum-initial-value options
+  - key: readability-enum-initial-value.AllowExplicitZeroFirstInitialValue
+    value: 'true'
+  - key: readability-enum-initial-value.AllowExplicitSequentialInitialValues
+    value: 'true'
+
+  # readability-function-cognitive-complexity options
+  - key: readability-function-cognitive-complexity.Threshold
+    value: '15'
+  - key: readability-function-cognitive-complexity.DescribeBasicIncrements
+    value: 'true'
+  - key: readability-function-cognitive-complexity.IgnoreMacros
+    value: 'true'
+
+  # readability-function-size options
+  - key: readability-function-size.StatementThreshold
+    value: '800'
+
+  # readability-identifier-naming options
+  - key: readability-identifier-naming.StructCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.StructPrefix
+    value: 'st_'
+  - key: readability-identifier-naming.StructSuffix
+    value: ''
+  - key: readability-identifier-naming.StructIgnoredRegexp
+    value: ''
+
+  - key: readability-identifier-naming.UnionCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.UnionPrefix
+    value: 'un_'
+  - key: readability-identifier-naming.UnionSuffix
+    value: ''
+  - key: readability-identifier-naming.UnionIgnoredRegexp
+    value: ''
+
+  - key: readability-identifier-naming.EnumCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.EnumPrefix
+    value: 'en_'
+  - key: readability-identifier-naming.EnumSuffix
+    value: ''
+  - key: readability-identifier-naming.EnumIgnoredRegexp
+    value: ''
+
+  - key: readability-identifier-naming.EnumConstantCase
+    value: 'UPPER_CASE'
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumConstantSuffix
+    value: ''
+  - key: readability-identifier-naming.EnumConstantIgnoredRegexp
+    value: ''
+  - key: readability-identifier-naming.EnumConstantHungarianPrefix
+    value: 'Off'
+
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: 'g_'
+  - key: readability-identifier-naming.GlobalVariableSuffix
+    value: ''
+  - key: readability-identifier-naming.GlobalVariableIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.GlobalVariableHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.GlobalConstantSuffix
+    value: ''
+  - key: readability-identifier-naming.GlobalConstantIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.GlobalConstantHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.GlobalPointerCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.GlobalPointerPrefix
+    value: 'g_pt_'
+  - key: readability-identifier-naming.GlobalPointerSuffix
+    value: ''
+  - key: readability-identifier-naming.GlobalPointerIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.GlobalPointerHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.LocalVariableCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.LocalVariablePrefix
+    value: ''
+  - key: readability-identifier-naming.LocalVariableSuffix
+    value: ''
+  - key: readability-identifier-naming.LocalVariableIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.LocalVariableHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.LocalConstantCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.LocalConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.LocalConstantSuffix
+    value: ''
+  - key: readability-identifier-naming.LocalConstantIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.LocalConstantHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.LocalPointerCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.LocalPointerPrefix
+    value: 'pt_'
+  - key: readability-identifier-naming.LocalPointerSuffix
+    value: ''
+  - key: readability-identifier-naming.LocalPointerIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.LocalPointerHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: 'UPPER_CASE'
+  - key: readability-identifier-naming.MacroDefinitionPrefix
+    value: ''
+  - key: readability-identifier-naming.MacroDefinitionSuffix
+    value: ''
+  - key: readability-identifier-naming.MacroDefinitionIgnoredRegexp
+    value: ''
+
+  - key: readability-identifier-naming.FunctionCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.FunctionPrefix
+    value: ''
+  - key: readability-identifier-naming.FunctionSuffix
+    value: ''
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: ''
+
+  - key: readability-identifier-naming.ParameterCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.ParameterPrefix
+    value: 'p_'
+  - key: readability-identifier-naming.ParameterSuffix
+    value: ''
+  - key: readability-identifier-naming.ParameterIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.ParameterHungarianPrefix
+  #   value: ''
+
+  - key: readability-identifier-naming.PointerParameterCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.PointerParameterPrefix
+    value: 'ppt_'
+  - key: readability-identifier-naming.PointerParameterSuffix
+    value: ''
+  - key: readability-identifier-naming.PointerParameterIgnoredRegexp
+    value: ''
+  # - key: readability-identifier-naming.PointerParameterHungarianPrefix
+  #   value: ''

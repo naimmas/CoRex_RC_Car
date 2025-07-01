@@ -1,0 +1,15 @@
+
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+ImplementationFileExtensions:
+  - c
+HeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+Checks: >
+  cert-err34-c,
+  cert-flp30-c,
+  cert-msc30-c,
+  cert-msc32-c,

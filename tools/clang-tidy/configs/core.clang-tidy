@@ -1,0 +1,21 @@
+
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+ImplementationFileExtensions:
+  - c
+HeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+  # cppcoreguidelines-avoid-non-const-global-variables,
+Checks: >
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-init-variables,
+  
+CheckOptions:
+  # cppcoreguidelines-init-variables options
+  - key: cppcoreguidelines-init-variables.IncludeStyle
+    value: llvm
+  - key: cppcoreguidelines-init-variables.MathHeader
+    value: math.h

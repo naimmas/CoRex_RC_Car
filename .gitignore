@@ -1,0 +1,23 @@
+# editors
+*.swp
+*~
+.DS_Store
+
+# python
+.venv
+
+# build
+
+/twister-out*
+.priv_*
+
+__pycache__/
+
+# vscode
+.vscode/
+
+build/
+
+.settings/
+
+.*project

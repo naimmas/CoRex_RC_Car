@@ -1,0 +1,148 @@
+
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+ImplementationFileExtensions:
+  - c
+HeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+#  bugprone-bitwise-pointer-cast,
+#  bugprone-tagged-union-member-count,
+Checks: >
+  bugprone-argument-comment,
+  bugprone-assert-side-effect,
+  bugprone-assignment-in-if-condition,
+  bugprone-bool-pointer-implicit-conversion,
+  bugprone-branch-clone,
+  bugprone-casting-through-void,
+  bugprone-chained-comparison,
+  bugprone-compare-pointer-to-member-virtual-function,
+  bugprone-copy-constructor-init,
+  bugprone-dynamic-static-initializers,
+  bugprone-implicit-widening-of-multiplication-result,
+  bugprone-inc-dec-in-conditions,
+  bugprone-incorrect-roundings,
+  bugprone-infinite-loop,
+  bugprone-integer-division,
+  bugprone-macro-parentheses,
+  bugprone-macro-repeated-side-effects,
+  bugprone-misplaced-operator-in-strlen-in-alloc,
+  bugprone-misplaced-pointer-arithmetic-in-alloc,
+  bugprone-misplaced-widening-cast,
+  bugprone-multi-level-implicit-pointer-conversion,
+  bugprone-multiple-statement-macro,
+  bugprone-narrowing-conversions,
+  bugprone-non-zero-enum-to-bool-conversion,
+  bugprone-not-null-terminated-result,
+  bugprone-redundant-branch-condition,
+  bugprone-reserved-identifier,
+  bugprone-signed-char-misuse,
+  bugprone-sizeof-container,
+  bugprone-sizeof-expression,
+  bugprone-string-literal-with-embedded-nul,
+  bugprone-suspicious-enum-usage,
+  bugprone-suspicious-include,
+  bugprone-suspicious-memory-comparison,
+  bugprone-suspicious-memset-usage,
+  bugprone-suspicious-missing-comma,
+  bugprone-suspicious-realloc-usage,
+  bugprone-suspicious-semicolon,
+  bugprone-suspicious-string-compare,
+  bugprone-swapped-arguments,
+  bugprone-switch-missing-default-case,
+  bugprone-terminating-continue,
+  bugprone-too-small-loop-variable,
+  bugprone-undefined-memory-manipulation,
+  bugprone-unsafe-functions,
+  bugprone-unused-return-value,
+
+CheckOptions:
+  # bugprone-argument-comment options
+  - key: bugprone-argument-comment.StrictMode
+    value: 'true'
+  - key: bugprone-argument-comment.IgnoreSingleArgument
+    value: 'false'
+  - key: bugprone-argument-comment.CommentBoolLiterals
+    value: 'false'
+  - key: bugprone-argument-comment.CommentIntegerLiterals
+    value: 'false'
+  - key: bugprone-argument-comment.CommentFloatLiterals
+    value: 'false'
+  - key: bugprone-argument-comment.CommentStringLiterals
+    value: 'false'
+  - key: bugprone-argument-comment.CommentCharacterLiterals
+    value: 'false'
+  - key: bugprone-argument-comment.CommentUserDefinedLiterals
+    value: 'false'
+  - key: bugprone-argument-comment.CommentNullPtrs
+    value: 'false'
+
+  # bugprone-assert-side-effect options
+  - key: bugprone-assert-side-effect.AssertMacros
+    value: 'assert,NSAssert,NSCAssert,ASSERT_AND_RETURN'
+  - key: bugprone-assert-side-effect.CheckFunctionCalls
+    value: 'true'
+  - key: bugprone-assert-side-effect.IgnoredFunctions
+    value: ''
+
+  # bugprone-misplaced-widening-cast options
+  - key: bugprone-misplaced-widening-cast.CheckImplicitCasts
+    value: 'false'
+
+  # bugprone-narrowing-conversions options
+  - key: bugprone-narrowing-conversions.WarnOnIntegerNarrowingConversion
+    value: 'true'
+  - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+    value: 'true'
+  - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+    value: 'true'
+  - key: bugprone-narrowing-conversions.WarnWithinTemplateInstantiation
+    value: 'false'
+  - key: bugprone-narrowing-conversions.WarnOnEquivalentBitWidth
+    value: 'true'
+  - key: bugprone-narrowing-conversions.IgnoreConversionFromTypes
+    value: ''
+  - key: bugprone-narrowing-conversions.PedanticMode
+    value: 'false'
+
+  # bugprone-non-zero-enum-to-bool-conversion options
+  - key: bugprone-non-zero-enum-to-bool-conversion.EnumIgnoreList
+    value: ''
+
+  # bugprone-not-null-terminated-result options
+  - key: bugprone-not-null-terminated-result.WantToUseSafeFunctions
+    value: 'true'
+
+  # bugprone-sizeof-expression options
+  #  - key: bugprone-sizeof-expression.WarnOnOffsetDividedBySizeOf
+  #    value: 'true'
+  #  - key: bugprone-unsafe-functions.ReportDefaultFunctions
+  #    value: 'true'
+  #  - key: bugprone-unsafe-functions.CustomFunctions
+  #    value: ''
+  - key: bugprone-sizeof-expression.WarnOnSizeOfConstant
+    value: 'true'
+  - key: bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression
+    value: 'true'
+  - key: bugprone-sizeof-expression.WarnOnSizeOfCompareToConstant
+    value: 'true'
+  - key: bugprone-sizeof-expression.WarnOnSizeOfPointer
+    value: 'true'
+
+  # bugprone-too-small-loop-variable options
+  - key: bugprone-too-small-loop-variable.MagnitudeBitsUpperLimit
+    value: '32'
+
+  # bugprone-unsafe-functions options
+  - key: bugprone-unsafe-functions.ReportMoreUnsafeFunctions
+    value: 'true'
+
+  # bugprone-unused-return-value options
+  - key: bugprone-unused-return-value.CheckedFunctions
+    value: ''
+  - key: bugprone-unused-return-value.CheckedReturnTypes
+    value: ''
+  - key: bugprone-unused-return-value.AllowCastToVoid
+    value: 'false'
