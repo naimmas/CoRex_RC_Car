@@ -9,12 +9,10 @@
 
 
 #if !defined(TEST)
-#if MCU == STM32
 #define SW_BREAK() \
     do { \
         __asm__ __volatile__("bkpt #0\n\t" : : : "memory"); \
     } while (0);
-// TODO: Add similar functionalitiy for RP2040
 #endif
 #else
 #define SW_BREAK() ;
