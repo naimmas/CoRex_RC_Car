@@ -101,6 +101,16 @@ typedef enum en_qmi86_self_test
     QMI86_SELF_TEST_ALL = QMI86_SELF_TEST_GYRO | QMI86_SELF_TEST_ACC,
 }qmi86_self_test;
 
+typedef enum en_qmi86_self_test_result
+{
+    QMI86_ST_RESULT_OK = 0x00,
+    QMI86_ST_RESULT_FAILED_ACC,
+    QMI86_ST_RESULT_FAILED_GYRO,
+    QMI86_ST_RESULT_FAILED_ALL,
+    QMI86_ST_RESULT_TIMEOUT,
+    QMI86_ST_RESULT_API_ERROR,
+}qmi86_st_result;
+
 struct st_qmi86_int_settings
 {
     bool_t int1_enable;
@@ -112,9 +122,6 @@ struct st_qmi86_int_settings
 struct st_qmi86_ifc_settings
 {
     qmi86_spi_mode_t spi_mode;
-    // todo user shouldn't set those settings. those should be set at init
-    bool_t address_auto_increment;
-    qmi86_data_format_t data_format;
 };
 
 struct st_qmi86_data_settings
@@ -167,9 +174,10 @@ response_status_t dd_qmi86_get_interface_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_get_interrupt_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_get_device_mode(qmi86_dev_t* ppt_dev, qmi86_sensor_mode* p_dev_mode);
 qmi86_dev_t*     dd_qmi86_get_dev(qmi86_dev_id_t p_dev_id);
-response_status_t dd_qmi86_perform_self_test(qmi86_dev_t* ppt_dev);
+qmi86_st_result dd_qmi86_gyro_self_test(qmi86_dev_t* ppt_dev);
+qmi86_st_result dd_qmi86_accel_self_test(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_perform_calibration(qmi86_dev_t* ppt_dev);
-response_status_t dd_qmi86_reset(qmi86_dev_t* ppt_dev);
+response_status_t dd_qmi86_reset_device(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev, bool_t from_isr);
 response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id);
 

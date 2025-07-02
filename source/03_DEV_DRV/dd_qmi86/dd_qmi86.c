@@ -3,11 +3,12 @@
 #include "dd_qmi86_defs.h"
 #include "ha_iic/ha_iic.h"
 #include "ha_timer/ha_timer.h"
+#include "string.h"
+#include "stdlib.h"
 
 #define DEFAULT_IIC_TIMEOUT (100U) // Default I2C timeout in milliseconds
 
-#define QMI_SET_BITS(bitname, data) ((data) << (bitname##_POS))
-
+#define QMI_OWR_BITS(reg_data, bitname, data) (((reg_data) & (~bitname##_MSK)) | ((data) << (bitname##_POS)))
 #define QMI_GET_BITS(reg_data, bitname) (((reg_data) & (bitname##_MSK)) >> (bitname##_POS))
 
 IIC_SETUP_PORT_CONNECTION(QMI86_DEV_CNT,
@@ -17,8 +18,6 @@ IIC_SETUP_PORT_CONNECTION(QMI86_DEV_CNT,
 typedef struct st_driver
 {
     qmi86_dev_t                dev;
-
-
     uint8_t                     dev_id;
     bool_t                      is_initialized;
 } driver_t;
@@ -125,9 +124,40 @@ static response_status_t read_chip_id(qmi86_dev_t* ppt_dev)
     return ret_val;    
 }
 
+static response_status_t wait_for_statusint_0bit(qmi86_dev_t* ppt_dev, uint8_t desired_bit_val)
+{
+    ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(desired_bit_val > 0x01, RET_PARAM_ERROR);
+
+    response_status_t ret_val = RET_OK;
+    bool_t bit_ok = FALSE;
+    uint8_t reg_data = 0x00;
+    uint8_t max_retry_cnt = 50U;
+    const uint8_t delay_per_try_ms = 10U;
+
+    while(ret_val == RET_OK && bit_ok == FALSE)
+    {
+        ret_val = read_register(ppt_dev, &reg_data, 1, QMI86_REG_STATUSINT);
+        bit_ok = (QMI_GET_BITS(reg_data, QMI86_REG_STATUSINT_AVAIL) == desired_bit_val);
+
+        max_retry_cnt--;
+        if (max_retry_cnt == 0)
+        {
+            ret_val = RET_TIMEOUT;
+            break;
+        }
+
+        ha_timer_hard_delay_ms(delay_per_try_ms);
+    }
+
+    return ret_val;
+}
+
 response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev)
 {
-  /*TODO: Implement Me!*/
+  //TODO: Implement Me!
+  //! Refer to 13.5
+
   (void)ppt_dev;
   return (response_status_t)0;
 }
@@ -157,7 +187,7 @@ response_status_t dd_qmi86_snooze_gyro(qmi86_dev_t* ppt_dev, bool_t p_snooze)
     
     if (ret_val == RET_OK)
     {
-        ctrl7_reg_data |= QMI_SET_BITS(QMI86_REG_CTRL7_GSN, p_snooze);
+        ctrl7_reg_data = QMI_OWR_BITS(ctrl7_reg_data, QMI86_REG_CTRL7_GSN, p_snooze);
         ret_val = write_register(ppt_dev, &ctrl7_reg_data, 1, QMI86_REG_CTRL7);
     }
     else
@@ -189,8 +219,8 @@ response_status_t dd_qmi86_set_device_mode(qmi86_dev_t* ppt_dev, qmi86_sensor_mo
 
     if (ret_val == RET_OK)
     {
-        ctrl1_reg_data |= QMI_SET_BITS(QMI86_REG_CTRL1_SENS_DISABLE, all_disabled);
-        ctrl7_reg_data |= QMI_SET_BITS(QMI86_REG_CTRL7_AGEN, p_dev_mode);
+        ctrl1_reg_data = QMI_OWR_BITS(ctrl1_reg_data, QMI86_REG_CTRL1_SENS_DISABLE, all_disabled);
+        ctrl7_reg_data = QMI_OWR_BITS(ctrl7_reg_data, QMI86_REG_CTRL7_AGEN, p_dev_mode);
 
         ret_val |= write_register(ppt_dev, &ctrl1_reg_data, 1, QMI86_REG_CTRL1);
         ret_val |= write_register(ppt_dev, &ctrl7_reg_data, 1, QMI86_REG_CTRL7);
@@ -254,8 +284,6 @@ response_status_t dd_qmi86_get_interface_settings(qmi86_dev_t* ppt_dev)
     if(ret_val == RET_OK)
     {
         hndlr->spi_mode = QMI_GET_BITS(reg_content, QMI86_REG_CTRL1_SIM);
-        hndlr->address_auto_increment = QMI_GET_BITS(reg_content, QMI86_REG_CTRL1_ADDR_AI);
-        hndlr->data_format = QMI_GET_BITS(reg_content, QMI86_REG_CTRL1_BE);
     }
     else
     {
@@ -327,11 +355,185 @@ qmi86_dev_t* dd_qmi86_get_dev(qmi86_dev_id_t p_dev_id)
     return &g_driver[p_dev_id].dev;
 }
 
-response_status_t dd_qmi86_perform_self_test(qmi86_dev_t* ppt_dev)
+qmi86_st_result dd_qmi86_gyro_self_test(qmi86_dev_t* ppt_dev)
 {
-  /*TODO: Implement Me!*/
-  (void)ppt_dev;
-  return (response_status_t)0;
+    ASSERT_AND_RETURN(ppt_dev == NULL, QMI86_ST_RESULT_API_ERROR);
+
+    response_status_t api_ret_val = RET_OK;
+    qmi86_st_result ret_val = QMI86_ST_RESULT_OK;
+    uint8_t ctrl7_bkp = 0x00;
+    uint8_t reg_data = 0x00;
+    // The typical time for Self-Test costs about 25 ODRs as odr selected for st is 1Khz then total time is 25Ms
+    const uint16_t st_total_time_ms = 300U;
+    uint8_t st_result[6] = { 0x00 };
+    int16_t st_x_dps = 0U;
+    int16_t st_y_dps = 0U;
+    int16_t st_z_dps = 0U;
+
+    api_ret_val = read_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
+    //1. Disable the sensors (CTRL7 = 0x00).
+    if (api_ret_val == RET_OK)
+    {
+        reg_data = 0x00;
+        api_ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL7);
+    }
+
+    //2. Set the bit gST to 1. (CTRL3.bit7 = 1’b1).
+    api_ret_val = read_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL3);
+    if (api_ret_val == RET_OK)
+    {
+        reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL3_GST, 0x01);
+        api_ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL3);
+    }
+
+    //3. Wait for QMI8658A to drive INT2 to High, if INT2 is enabled (CTRL1.bit4 = 1), or STATUSINT.bit0 is set to 1.
+    if (api_ret_val == RET_OK)
+    {
+        reg_data = 0x00;
+        ha_timer_hard_delay_ms(st_total_time_ms);
+        api_ret_val = wait_for_statusint_0bit(ppt_dev, 0x01);
+    }
+
+    //4. Set CTRL2.aST(bit7) to 0, to clear STATUSINT1.bit0 and/or INT2.
+    if(api_ret_val ==RET_OK)
+    {
+        reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL2_AST, 0x00);
+        api_ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL2);
+    }
+
+    //5. Check for QMI8658A drives INT2 back to Low, and sets STATUSINT1.bit0 to 0.
+    if(api_ret_val == RET_OK)
+    {
+        api_ret_val = wait_for_statusint_0bit(ppt_dev, 0x00);
+    }
+
+    //6. Read the Accel Self-Test result:
+    if(api_ret_val ==RET_OK)
+    {
+        api_ret_val = read_register(ppt_dev, st_result, ARRAY_SIZE(st_result), QMI86_REG_DVX_L);
+    }
+
+    if(api_ret_val == RET_OK)
+    {
+        st_x_dps =(int16_t)BYTES_TO_WORD(st_result[0], st_result[1]);
+        st_y_dps =(int16_t)BYTES_TO_WORD(st_result[2], st_result[3]);
+        st_z_dps =(int16_t)BYTES_TO_WORD(st_result[4], st_result[5]);
+        
+        if (abs(st_x_dps) > (300U * (1U << 4U)) &&
+            abs(st_y_dps) > (300U * (1U << 4U)) &&
+            abs(st_z_dps) > (300U * (1U << 4U)))
+            {
+                ret_val = QMI86_ST_RESULT_OK;
+            }
+            else
+            {
+                ret_val = QMI86_ST_RESULT_FAILED_GYRO;
+            }
+    }
+
+    write_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
+
+    if (api_ret_val == RET_TIMEOUT)
+    {
+        ret_val = QMI86_ST_RESULT_TIMEOUT;
+    }
+    else if (api_ret_val != RET_OK)
+    {
+        ret_val = QMI86_ST_RESULT_API_ERROR;
+    }
+
+    return ret_val;
+}
+
+qmi86_st_result dd_qmi86_accel_self_test(qmi86_dev_t* ppt_dev)
+{
+    ASSERT_AND_RETURN(ppt_dev == NULL, QMI86_ST_RESULT_API_ERROR);
+
+    response_status_t api_ret_val = RET_OK;
+    qmi86_st_result ret_val = QMI86_ST_RESULT_OK;
+    uint8_t ctrl7_bkp = 0x00;
+    uint8_t reg_data = 0x00;
+    // The typical time for Self-Test costs about 25 ODRs as odr selected for st is 1Khz then total time is 25Ms
+    const uint16_t st_total_time_ms = (QMI86_ST_ODR_CYCLE_CNT * 1U);
+    uint8_t st_result[6] = { 0x00 };
+    int16_t st_x_mg = 0U;
+    int16_t st_y_mg = 0U;
+    int16_t st_z_mg = 0U;
+
+    api_ret_val = read_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
+    //1. Disable the sensors (CTRL7 = 0x00).
+    if (api_ret_val == RET_OK)
+    {
+        reg_data = 0x00;
+        api_ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL7);
+    }
+
+    //2. Set proper accelerometer ODR (CTRL2.aODR) and bit CTRL2.aST (bit7) to 1 to trigger the Self-Test.
+    api_ret_val = read_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL2);
+    if (api_ret_val == RET_OK)
+    {
+        reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL2_AODR, QMI86_ACC_ODR_1000_HZ);
+        reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL2_AST, 0x01);
+        api_ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL2);
+    }
+
+    //3. Wait for QMI8658A to drive INT2 to High, if INT2 is enabled (CTRL1.bit4 = 1), or STATUSINT.bit0 is set to 1.
+    if (api_ret_val == RET_OK)
+    {
+        reg_data = 0x00;
+        ha_timer_hard_delay_ms(st_total_time_ms);
+        api_ret_val = wait_for_statusint_0bit(ppt_dev, 0x01);
+    }
+
+    //4. Set CTRL2.aST(bit7) to 0, to clear STATUSINT1.bit0 and/or INT2.
+    if(api_ret_val ==RET_OK)
+    {
+        reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL2_AST, 0x00);
+        api_ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL2);
+    }
+
+    //5. Check for QMI8658A drives INT2 back to Low, and sets STATUSINT1.bit0 to 0.
+    if(api_ret_val == RET_OK)
+    {
+        api_ret_val = wait_for_statusint_0bit(ppt_dev, 0x00);
+    }
+
+    //6. Read the Accel Self-Test result:
+    if(api_ret_val ==RET_OK)
+    {
+        api_ret_val = read_register(ppt_dev, st_result, ARRAY_SIZE(st_result), QMI86_REG_DVX_L);
+    }
+
+    if(api_ret_val == RET_OK)
+    {
+        st_x_mg =(int16_t)BYTES_TO_WORD(st_result[0], st_result[1]);
+        st_y_mg =(int16_t)BYTES_TO_WORD(st_result[2], st_result[3]);
+        st_z_mg =(int16_t)BYTES_TO_WORD(st_result[4], st_result[5]);
+        
+        if (abs(st_x_mg) > (200U * 2U) &&
+            abs(st_y_mg) > (200U * 2U) &&
+            abs(st_z_mg) > (200U * 2U))
+            {
+                ret_val = QMI86_ST_RESULT_OK;
+            }
+            else
+            {
+                ret_val = QMI86_ST_RESULT_FAILED_ACC;
+            }
+    }
+
+    write_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
+
+    if (api_ret_val == RET_TIMEOUT)
+    {
+        ret_val = QMI86_ST_RESULT_TIMEOUT;
+    }
+    else if (api_ret_val != RET_OK)
+    {
+        ret_val = QMI86_ST_RESULT_API_ERROR;
+    }
+
+    return ret_val;
 }
 
 response_status_t dd_qmi86_perform_calibration(qmi86_dev_t* ppt_dev)
@@ -384,6 +586,21 @@ response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev, bool_t from_isr)
   return (response_status_t)0;
 }
 
+response_status_t init_comm_ifc(qmi86_dev_t* ppt_dev)
+{
+    ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
+
+    uint8_t reg_data = 0x00;
+    response_status_t ret_val = RET_OK;
+
+    reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL1_ADDR_AI, 0x01);
+    reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL1_BE, 0x01);
+
+    ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL1);
+
+    return ret_val;
+}
+
 response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
@@ -399,14 +616,13 @@ response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id)
         memset(pt_curr_drv, 0U, sizeof(driver_t));
         pt_curr_drv->dev_id = p_dev_id;
 
-        if (is_dev_ready(pt_curr_dev))
+        if (is_dev_ready(pt_curr_dev) == TRUE && init_comm_ifc(pt_curr_dev) == RET_OK)
         {
             pt_curr_drv->is_initialized = TRUE;
             ret_val |= read_firmware_version(pt_curr_dev);
             ret_val |= read_chip_id(pt_curr_dev);
             ret_val |= dd_qmi86_get_data_settings(pt_curr_dev);
-            ret_val |= dd_qmi86_get_dev_settings(pt_curr_dev);
-            ret_val |= dd_qmi86_get_ifc_settings(pt_curr_dev);
+            ret_val |= dd_qmi86_get_interface_settings(pt_curr_dev);
             ret_val |= dd_qmi86_get_interrupt_settings(pt_curr_dev);
         }
         else
@@ -433,4 +649,3 @@ response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id)
 
     return ret_val;
 }
-
