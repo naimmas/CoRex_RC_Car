@@ -7,6 +7,7 @@
 #include "ha_uart/ha_uart.h"
 #include "string.h"
 #include "su_string/su_string.h"
+#include "stdio.h"
 
 /***************************************************************************************************
  * Macro definitions.
@@ -296,10 +297,15 @@ void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name,
             add_log_prefix(p_lvl, ppt_func_name, &bytes_written);
             process_message(ppt_msg, &bytes_written, (float*)p_params_list);
         }
-
+#if (LOGGER_OUTPUT_CHANNEL == LOGGER_CHNL_UART)
         ha_uart_transmit(LOGGER_UART_PORT,
                          (uint8_t*)g_debug_msg,
                          bytes_written,
                          DEFAUL_UART_SEND_TIMEOUT);
+#elif (LOGGER_OUTPUT_CHANNEL == LOGGER_CHNL_DEBUG)                         
+        printf("%s", g_debug_msg);
+#else
+#error "Define logger channel"
+#endif
     }
 }

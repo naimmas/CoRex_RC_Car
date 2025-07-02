@@ -10,6 +10,11 @@
 /***************************************************************************************************
  * Macro definitions.
  ***************************************************************************************************/
+#define LOGGER_CHNL_UART 1
+#define LOGGER_CHNL_DEBUG 2
+
+#define LOGGER_ENABLED 1
+#define LOGGER_OUTPUT_CHANNEL LOGGER_CHNL_DEBUG
 
 #define MAX_DBG_MSG_LEN 512
 
