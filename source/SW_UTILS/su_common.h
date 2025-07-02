@@ -7,7 +7,6 @@
 #include "stdint.h"
 #include "su_byte_utils.h"
 
-#define LOGGER_ENABLED
 
 #if !defined(TEST)
 #if MCU == STM32
