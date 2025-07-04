@@ -38,13 +38,12 @@
 void string_reverse(char* ppt_str, uint32_t p_str_len)
 {
     ASSERT_AND_RETURN(ppt_str == NULL, );
-    ASSERT_AND_RETURN(p_str_len <= 1, );
 
     uint32_t start = 0U;
     uint32_t end   = p_str_len - 1;
     char     temp  = (char)0;
 
-    if (p_str_len <= MAX_STRING_LEN)
+    if (p_str_len > 1 && p_str_len <= MAX_STRING_LEN)
     {
         while (start < end)
         {
