@@ -7,13 +7,11 @@
 #include "stdint.h"
 #include "su_byte_utils.h"
 
-
 #if !defined(TEST)
 #define SW_BREAK() \
     do { \
         __asm__ __volatile__("bkpt #0\n\t" : : : "memory"); \
     } while (0);
-#endif
 #else
 #define SW_BREAK() ;
 #endif
