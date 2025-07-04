@@ -261,4 +261,8 @@
 #define QMI86_ACCEL_POWER_ON_TIME (10U)
 
 #define QMI86_ST_ODR_CYCLE_CNT (25U)
+
+#define ACC_SCALE_SENSITIVITY_MAX        (14U)  // Sensitivity for ±2g range.
+#define GYRO_SCALE_SENSITIVITY_MAX    (11U)  // Sensitivity for ±16 degrees per second range.
+
 #endif // DD_QMI86_DEFS_H

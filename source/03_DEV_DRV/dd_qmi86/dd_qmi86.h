@@ -118,15 +118,15 @@ union gyro_calib_result
 {
     struct
     {
-        uint8_t calib_failed: 1;
-        uint8_t gyro_was_enabled: 1;
-        uint8_t startup_failed: 1;
-        uint8_t device_vibrated: 1;
-        uint8_t y_axis_high_limit_failed: 1;
-        uint8_t y_axis_low_limit_failed: 1;
-        uint8_t x_axis_high_limit_failed: 1;
-        uint8_t x_axis_low_limit_failed: 1;
-    }err_flags;
+        uint8_t calib_failed             : 1;
+        uint8_t gyro_was_enabled         : 1;
+        uint8_t startup_failed           : 1;
+        uint8_t device_vibrated          : 1;
+        uint8_t y_axis_high_limit_failed : 1;
+        uint8_t y_axis_low_limit_failed  : 1;
+        uint8_t x_axis_high_limit_failed : 1;
+        uint8_t x_axis_low_limit_failed  : 1;
+    } err_flags;
     uint8_t result_code;
 };
 
@@ -173,6 +173,18 @@ struct st_qmi86_clibration_data
 {
     struct st_qmi86_gyro_calib gyro_data;
 };
+struct st_qmi86_sensor_data
+{
+    float x;
+    float y;
+    float z;
+};
+
+struct st_qmi86_data
+{
+    struct st_qmi86_sensor_data gyro;
+    struct st_qmi86_sensor_data accel;
+};
 
 typedef struct st_qmi86_dev
 {
@@ -188,8 +200,9 @@ typedef struct st_qmi86_dev
         uint8_t  u8_arr[4];
     } chip_id;
 
-    struct st_qmi86_settings settings;
+    struct st_qmi86_settings        settings;
     struct st_qmi86_clibration_data clib_params;
+    struct st_qmi86_data data;
 } qmi86_dev_t;
 
 typedef enum en_qmi86_dev_id
@@ -201,16 +214,19 @@ typedef enum en_qmi86_dev_id
 response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_set_interface_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_set_interrupt_settings(qmi86_dev_t* ppt_dev);
-response_status_t dd_qmi86_set_device_mode(qmi86_dev_t* ppt_dev, qmi86_sensor_mode p_dev_mode);
+response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
+                                           qmi86_sensor_mode p_dev_mode);
 response_status_t dd_qmi86_get_data_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_get_interface_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_get_interrupt_settings(qmi86_dev_t* ppt_dev);
-response_status_t dd_qmi86_get_device_mode(qmi86_dev_t* ppt_dev, qmi86_sensor_mode* p_dev_mode);
-response_status_t dd_qmi86_calibrate_gyro(qmi86_dev_t* ppt_dev, union gyro_calib_result* p_result_hndlr);
-qmi86_st_result dd_qmi86_perform_self_test(qmi86_dev_t*    ppt_dev, qmi86_sensors_t p_sensor_type);
+qmi86_sensor_mode dd_qmi86_get_device_mode(qmi86_dev_t* ppt_dev);
+response_status_t dd_qmi86_calibrate_gyro(
+  qmi86_dev_t* ppt_dev, union gyro_calib_result* p_result_hndlr);
+qmi86_st_result   dd_qmi86_perform_self_test(qmi86_dev_t*    ppt_dev,
+                                             qmi86_sensors_t p_sensor_type);
 response_status_t dd_qmi86_reset_device(qmi86_dev_t* ppt_dev);
-response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev, bool_t from_isr);
+response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id);
-qmi86_dev_t*     dd_qmi86_get_dev(qmi86_dev_id_t p_dev_id);
+qmi86_dev_t*      dd_qmi86_get_dev(qmi86_dev_id_t p_dev_id);
 
 #endif // DD_QMI86_H

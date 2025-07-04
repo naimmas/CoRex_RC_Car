@@ -37,9 +37,12 @@ typedef enum
 
 typedef struct st_driver
 {
-    qmi86_dev_t dev;
-    uint8_t     dev_id;
-    bool_t      is_initialized;
+    qmi86_dev_t       dev;
+    qmi86_sensor_mode dev_mode;
+    uint8_t           dev_id;
+    bool_t            is_initialized;
+    uint16_t acc_sensitivity;
+    uint16_t gyro_sensitivity;
 } driver_t;
 
 static driver_t g_driver[QMI86_DEV_CNT];
@@ -122,7 +125,7 @@ static response_status_t wait_for_statusint_bit(qmi86_dev_t* ppt_dev,
 
         if (bit_ok == TRUE)
         {
-        	break;
+            break;
         }
         else if (max_retry_cnt == 0)
         {
@@ -136,32 +139,42 @@ static response_status_t wait_for_statusint_bit(qmi86_dev_t* ppt_dev,
     return ret_val;
 }
 
-static response_status_t exec_ctrl9_cmd(qmi86_dev_t* ppt_dev, ctrl9_cmds_t p_cmd, uint16_t p_cmd_time_ms) 
+static response_status_t exec_ctrl9_cmd(qmi86_dev_t* ppt_dev,
+                                        ctrl9_cmds_t p_cmd,
+                                        uint16_t     p_cmd_time_ms)
 {
-    response_status_t ret_val = RET_OK;
-    uint8_t reg_data = 0x00;
+    response_status_t ret_val  = RET_OK;
+    uint8_t           reg_data = 0x00;
 
     // 2. Write Ctrl9 register 0x0A with the appropriate Command value
     reg_data = p_cmd;
-    ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL9);
-    
-    // 3. The Device will set STATUSINT.bit7 to 1, and raise INT1(if CTRL1.bit3 = 1 & CTRL8.bit7 == 0), once it has executed the appropriate function based on the command value
-    if(ret_val == RET_OK)
+    ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL9);
+
+    // 3. The Device will set STATUSINT.bit7 to 1, and raise INT1(if CTRL1.bit3
+    // = 1 & CTRL8.bit7 == 0), once it has executed the appropriate function
+    // based on the command value
+    if (ret_val == RET_OK)
     {
         ha_timer_hard_delay_ms(p_cmd_time_ms);
-        ret_val = wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_CMD_DONE_POS);
+        ret_val = wait_for_statusint_bit(ppt_dev,
+                                         0x01,
+                                         QMI86_REG_STATUSINT_CMD_DONE_POS);
     }
 
-    // 4. The host must acknowledge this by writing CTRL_CMD_ACK (0x00) to CTRL9 register
-    if(ret_val == RET_OK)
+    // 4. The host must acknowledge this by writing CTRL_CMD_ACK (0x00) to CTRL9
+    // register
+    if (ret_val == RET_OK)
     {
         reg_data = CTRL_CMD_ACK;
-        ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL9);
+        ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL9);
     }
-    // 4. STATUSINT.bit7 (CmdDone) will be reset to 0 on receiving the CTRL_CMD_ACK command.
-    if(ret_val == RET_OK)
+    // 4. STATUSINT.bit7 (CmdDone) will be reset to 0 on receiving the
+    // CTRL_CMD_ACK command.
+    if (ret_val == RET_OK)
     {
-        ret_val = wait_for_statusint_bit(ppt_dev, 0x00, QMI86_REG_STATUSINT_CMD_DONE_POS);
+        ret_val = wait_for_statusint_bit(ppt_dev,
+                                         0x00,
+                                         QMI86_REG_STATUSINT_CMD_DONE_POS);
     }
 
     return ret_val;
@@ -176,13 +189,22 @@ static response_status_t init_dev_regs(qmi86_dev_t* ppt_dev)
 
     reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL1_ADDR_AI, 0x01);
     reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL1_BE, 0x00);
-    ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL1);
+    ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL1);
 
     reg_data = 0x00;
     reg_data = QMI_OWR_BITS(reg_data, QMI86_REG_CTRL8_CTRL9_HANDSHAKE, 0x01);
-    ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL9);
+    ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL9);
 
+    if (ret_val == RET_OK)
+    {
+        reg_data = 0x01;
+        ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CAL1_L);
+    }
 
+    if (ret_val == RET_OK)
+    {
+        ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING, 2000U);
+    }
     return ret_val;
 }
 
@@ -279,7 +301,8 @@ static qmi86_st_result self_test_gyro(qmi86_dev_t* ppt_dev)
     {
         reg_data = 0x00;
         ha_timer_hard_delay_ms(st_total_time_ms);
-        api_ret_val = wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_AVAIL_POS);
+        api_ret_val =
+          wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
     // 4. Set CTRL3.gST(bit7) to 0, to clear STATUSINT1.bit0 and/or INT2.
@@ -293,8 +316,9 @@ static qmi86_st_result self_test_gyro(qmi86_dev_t* ppt_dev)
     // to 0.
     if (api_ret_val == RET_OK)
     {
-    	ha_timer_hard_delay_ms(st_total_time_ms);
-        api_ret_val = wait_for_statusint_bit(ppt_dev, 0x00, QMI86_REG_STATUSINT_AVAIL_POS);
+        ha_timer_hard_delay_ms(st_total_time_ms);
+        api_ret_val =
+          wait_for_statusint_bit(ppt_dev, 0x00, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
     // 6. Read the Accel Self-Test result:
@@ -359,7 +383,7 @@ static qmi86_st_result self_test_accel(qmi86_dev_t* ppt_dev)
     int16_t        st_y_mg          = 0U;
     int16_t        st_z_mg          = 0U;
 
-    bkp_ret_val = read_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
+    bkp_ret_val  = read_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
     bkp_ret_val |= read_register(ppt_dev, &ctrl2_bkp, 1, QMI86_REG_CTRL2);
 
     // 1. Disable the sensors (CTRL7 = 0x00).
@@ -386,7 +410,8 @@ static qmi86_st_result self_test_accel(qmi86_dev_t* ppt_dev)
     {
         reg_data = 0x00;
         ha_timer_hard_delay_ms(st_total_time_ms);
-        api_ret_val = wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_AVAIL_POS);
+        api_ret_val =
+          wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
     // 4. Set CTRL2.aST(bit7) to 0, to clear STATUSINT1.bit0 and/or INT2.
@@ -400,7 +425,8 @@ static qmi86_st_result self_test_accel(qmi86_dev_t* ppt_dev)
     // to 0.
     if (api_ret_val == RET_OK)
     {
-        api_ret_val = wait_for_statusint_bit(ppt_dev, 0x00, QMI86_REG_STATUSINT_AVAIL_POS);
+        api_ret_val =
+          wait_for_statusint_bit(ppt_dev, 0x00, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
     // 6. Read the Accel Self-Test result:
@@ -451,9 +477,53 @@ response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev)
 {
     // TODO: Implement Me!
     //! Refer to 13.5
+    ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
 
-    (void)ppt_dev;
-    return (response_status_t)0;
+    response_status_t ret_val  = RET_OK;
+    uint8_t           reg_data = 0x00;
+
+    reg_data = QMI_OWR_BITS(reg_data,
+                            QMI86_REG_CTRL2_AFS,
+                            ppt_dev->settings.data_settings.acc_fsr);
+    reg_data = QMI_OWR_BITS(reg_data,
+                            QMI86_REG_CTRL2_AODR,
+                            ppt_dev->settings.data_settings.acc_odr);
+    ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL2);
+
+    if (ret_val == RET_OK)
+    {
+        ((driver_t*)ppt_dev)->acc_sensitivity = (1 << (ACC_SCALE_SENSITIVITY_MAX - ppt_dev->settings.data_settings.acc_fsr));
+
+        reg_data = QMI_OWR_BITS(reg_data,
+                                QMI86_REG_CTRL3_GFS,
+                                ppt_dev->settings.data_settings.gyro_fsr);
+        reg_data = QMI_OWR_BITS(reg_data,
+                                QMI86_REG_CTRL3_GODR,
+                                ppt_dev->settings.data_settings.gyro_odr);
+        ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL3);
+    }
+
+    if (ret_val == RET_OK)
+    {
+        ((driver_t*)ppt_dev)->gyro_sensitivity = (1 << (GYRO_SCALE_SENSITIVITY_MAX - ppt_dev->settings.data_settings.gyro_fsr));
+
+        reg_data = QMI_OWR_BITS(reg_data,
+                                QMI86_REG_CTRL5_ALPF_EN,
+                                ppt_dev->settings.data_settings.acc_lpf_en);
+        reg_data = QMI_OWR_BITS(reg_data,
+                                QMI86_REG_CTRL5_ALPF_MODE,
+                                ppt_dev->settings.data_settings.acc_lpf_mode);
+        reg_data = QMI_OWR_BITS(reg_data,
+                                QMI86_REG_CTRL5_GLPF_EN,
+                                ppt_dev->settings.data_settings.gyro_lpf_en);
+        reg_data = QMI_OWR_BITS(reg_data,
+                                QMI86_REG_CTRL5_GLPF_MODE,
+                                ppt_dev->settings.data_settings.gyro_lpf_mode);
+        ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL5);
+    }
+
+
+    return ret_val;
 }
 
 response_status_t dd_qmi86_set_interface_settings(qmi86_dev_t* ppt_dev)
@@ -532,20 +602,22 @@ response_status_t dd_qmi86_get_interface_settings(qmi86_dev_t* ppt_dev)
 
 response_status_t dd_qmi86_get_interrupt_settings(qmi86_dev_t* ppt_dev)
 {
-    response_status_t             ret_val     = RET_OK;
+    response_status_t             ret_val           = RET_OK;
     uint8_t                       ctrl1_reg_content = 0x00;
     uint8_t                       ctrl7_reg_content = 0x00;
     struct st_qmi86_int_settings* hndlr = &ppt_dev->settings.interrupt_settings;
 
-    ret_val = read_register(ppt_dev, &ctrl1_reg_content, 1, QMI86_REG_CTRL1);
+    ret_val  = read_register(ppt_dev, &ctrl1_reg_content, 1, QMI86_REG_CTRL1);
     ret_val |= read_register(ppt_dev, &ctrl7_reg_content, 1, QMI86_REG_CTRL7);
 
     if (ret_val == RET_OK)
     {
         hndlr->fifo_int_output =
           QMI_GET_BITS(ctrl1_reg_content, QMI86_REG_CTRL1_FIFO_INT_SEL);
-        hndlr->int1_enable = QMI_GET_BITS(ctrl1_reg_content, QMI86_REG_CTRL1_INT1_EN);
-        hndlr->int2_enable = QMI_GET_BITS(ctrl1_reg_content, QMI86_REG_CTRL1_INT2_EN);
+        hndlr->int1_enable =
+          QMI_GET_BITS(ctrl1_reg_content, QMI86_REG_CTRL1_INT1_EN);
+        hndlr->int2_enable =
+          QMI_GET_BITS(ctrl1_reg_content, QMI86_REG_CTRL1_INT2_EN);
         hndlr->drdy_enable =
           !QMI_GET_BITS(ctrl7_reg_content, QMI86_REG_CTRL7_DRDY_DIS);
     }
@@ -580,12 +652,9 @@ response_status_t dd_qmi86_snooze_gyro(qmi86_dev_t* ppt_dev, bool_t p_snooze)
     return ret_val;
 }
 
-response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
-                                           qmi86_sensor_mode p_dev_mode)
+static response_status_t enable_sensor(qmi86_dev_t*      ppt_dev,
+                                       qmi86_sensor_mode p_sensor_type)
 {
-    ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(p_dev_mode > QMI86_SENSOR_MODE_ACC_GYRO, RET_PARAM_ERROR);
-
     uint8_t ctrl1_reg_data                             = 0x00;
     uint8_t ctrl7_reg_data                             = 0x00;
     uint8_t sys_delays[QMI86_SENSOR_MODE_ACC_GYRO + 1] = {
@@ -595,7 +664,7 @@ response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
         // ignore accel turn on time as it's much lower than gyro
         QMI86_GYRO_POWER_ON_TIME
     };
-    uint8_t           all_disabled = (p_dev_mode == QMI86_SENSOR_DISABLE);
+    uint8_t           all_disabled = (p_sensor_type == QMI86_SENSOR_DISABLE);
     response_status_t ret_val      = RET_OK;
 
     // Save register contents
@@ -608,13 +677,13 @@ response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
                                       QMI86_REG_CTRL1_SENS_DISABLE,
                                       all_disabled);
         ctrl7_reg_data =
-          QMI_OWR_BITS(ctrl7_reg_data, QMI86_REG_CTRL7_AGEN, p_dev_mode);
+          QMI_OWR_BITS(ctrl7_reg_data, QMI86_REG_CTRL7_AGEN, p_sensor_type);
 
         ret_val |= write_register(ppt_dev, &ctrl1_reg_data, 1, QMI86_REG_CTRL1);
         ret_val |= write_register(ppt_dev, &ctrl7_reg_data, 1, QMI86_REG_CTRL7);
 
         // Wait for process
-        ha_timer_hard_delay_ms(sys_delays[p_dev_mode]);
+        ha_timer_hard_delay_ms(sys_delays[p_sensor_type]);
     }
     else
     {
@@ -624,37 +693,22 @@ response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
     return ret_val;
 }
 
-response_status_t dd_qmi86_get_device_mode(qmi86_dev_t*       ppt_dev,
-                                           qmi86_sensor_mode* p_dev_mode)
+response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
+                                           qmi86_sensor_mode p_dev_mode)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_dev_mode > QMI86_SENSOR_MODE_ACC_GYRO, RET_PARAM_ERROR);
 
-    uint8_t           ctrl1_reg_data = 0x00;
-    uint8_t           ctrl7_reg_data = 0x00;
-    response_status_t ret_val        = RET_OK;
+    ((driver_t*)ppt_dev)->dev_mode = p_dev_mode;
 
-    // Save register contents
-    ret_val  = read_register(ppt_dev, &ctrl1_reg_data, 1, QMI86_REG_CTRL1);
-    ret_val |= read_register(ppt_dev, &ctrl7_reg_data, 1, QMI86_REG_CTRL7);
+    return RET_OK;
+}
 
-    if (ret_val == RET_OK)
-    {
-        if (QMI_GET_BITS(ctrl1_reg_data, QMI86_REG_CTRL1_SENS_DISABLE) == 0x01)
-        {
-            *p_dev_mode = QMI86_SENSOR_DISABLE;
-        }
-        else
-        {
-            // Maps enabling bits to enum
-            *p_dev_mode = QMI_GET_BITS(ctrl7_reg_data, QMI86_REG_CTRL7_AGEN);
-        }
-    }
-    else
-    {
-        // Nothing to do
-    }
+qmi86_sensor_mode dd_qmi86_get_device_mode(qmi86_dev_t* ppt_dev)
+{
+    ASSERT_AND_RETURN(ppt_dev == NULL, QMI86_SENSOR_DISABLE);
 
-    return ret_val;
+    return ((driver_t*)ppt_dev)->dev_mode;
 }
 
 qmi86_dev_t* dd_qmi86_get_dev(qmi86_dev_id_t p_dev_id)
@@ -664,17 +718,18 @@ qmi86_dev_t* dd_qmi86_get_dev(qmi86_dev_id_t p_dev_id)
 
 response_status_t dd_qmi86_calibrate_accel(qmi86_dev_t* ppt_dev)
 {
-    (void) ppt_dev;
+    (void)ppt_dev;
     return RET_NOT_SUPPORTED;
 }
 
-response_status_t dd_qmi86_calibrate_gyro(qmi86_dev_t* ppt_dev, union gyro_calib_result* p_result_hndlr)
+response_status_t dd_qmi86_calibrate_gyro(
+  qmi86_dev_t* ppt_dev, union gyro_calib_result* p_result_hndlr)
 {
-    uint8_t           ctrl7_bkp   = 0x00;
-    uint8_t           reg_data    = 0x00;
-    uint8_t calib_data[6] = {0x00};
-    response_status_t ret_val = RET_OK;
-    p_result_hndlr->result_code = 0x00;
+    uint8_t           ctrl7_bkp     = 0x00;
+    uint8_t           reg_data      = 0x00;
+    uint8_t           calib_data[6] = { 0x00 };
+    response_status_t ret_val       = RET_OK;
+    p_result_hndlr->result_code     = 0x00;
 
     /*
      * First run COD
@@ -687,21 +742,22 @@ response_status_t dd_qmi86_calibrate_gyro(qmi86_dev_t* ppt_dev, union gyro_calib
     ret_val = read_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
     if (ret_val == RET_OK)
     {
-        reg_data    = QMI_OWR_BITS(ctrl7_bkp, QMI86_REG_CTRL7_AGEN, 0x00);
-        ret_val = read_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL7);
+        reg_data = QMI_OWR_BITS(ctrl7_bkp, QMI86_REG_CTRL7_AGEN, 0x00);
+        ret_val  = read_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL7);
     }
 
     // 2. Issue the CTRL_CMD_ON_DEMAND_CALIBRATION (0xA2) by CTRL9 command.
     // 3. Wait about 1.5 seconds for QMI8658A to finish the CTRL9 command.
     if (ret_val == RET_OK)
     {
-        ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_ON_DEMAND_CALIBRATION, 2000U);
+        ret_val =
+          exec_ctrl9_cmd(ppt_dev, CTRL_CMD_ON_DEMAND_CALIBRATION, 2000U);
     }
 
     if (ret_val == RET_OK)
     {
         reg_data = 0x00;
-        ret_val = read_register(ppt_dev, &reg_data, 1, QMI86_REG_COD_STATUS);
+        ret_val  = read_register(ppt_dev, &reg_data, 1, QMI86_REG_COD_STATUS);
     }
 
     if (ret_val == RET_OK)
@@ -714,9 +770,12 @@ response_status_t dd_qmi86_calibrate_gyro(qmi86_dev_t* ppt_dev, union gyro_calib
         ret_val = read_register(ppt_dev, calib_data, 6U, QMI86_REG_DVX_L);
         if (ret_val == RET_OK)
         {
-            ppt_dev->clib_params.gyro_data.x_gain = BYTES_TO_WORD(signed, calib_data[0], calib_data[1]);
-            ppt_dev->clib_params.gyro_data.y_gain = BYTES_TO_WORD(signed, calib_data[2], calib_data[3]);
-            ppt_dev->clib_params.gyro_data.z_gain = BYTES_TO_WORD(signed, calib_data[4], calib_data[5]);
+            ppt_dev->clib_params.gyro_data.x_gain =
+              BYTES_TO_WORD(signed, calib_data[0], calib_data[1]);
+            ppt_dev->clib_params.gyro_data.y_gain =
+              BYTES_TO_WORD(signed, calib_data[2], calib_data[3]);
+            ppt_dev->clib_params.gyro_data.z_gain =
+              BYTES_TO_WORD(signed, calib_data[4], calib_data[5]);
         }
         else
         {
@@ -780,12 +839,132 @@ response_status_t dd_qmi86_reset_device(qmi86_dev_t* ppt_dev)
     return ret_val;
 }
 
-response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev, bool_t from_isr)
+static response_status_t set_data_regs_lock(qmi86_dev_t* ppt_dev,
+                                            bool_t       lock_status)
 {
-    //TODO: Implement Me!
-    (void)ppt_dev;
-    (void)from_isr;
-    return (response_status_t)0;
+    response_status_t ret_val   = RET_OK;
+    uint8_t           reg_data  = 0x00;
+    uint8_t           ctrl7_bkp = 0x00;
+
+    ret_val = read_register(ppt_dev, &ctrl7_bkp, 1, QMI86_REG_CTRL7);
+    if (lock_status == TRUE)
+    {
+        // 1. Disable internal AHB
+        // if (ret_val == RET_OK)
+        // {
+        //     reg_data = 0x01;
+        //     ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CAL1_L);
+        // }
+
+        // if (ret_val == RET_OK)
+        // {
+        //     ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING, 2000U);
+        // }
+
+        // 2. Enable locking mechanism
+        if (ret_val == RET_OK)
+        {
+            reg_data =
+              QMI_OWR_BITS(ctrl7_bkp, QMI86_REG_CTRL7_SYNC_SAMPLE, 0x01);
+            ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL7);
+        }
+        if (ret_val == RET_OK)
+        {
+            ret_val = enable_sensor(ppt_dev, ((driver_t*)ppt_dev)->dev_mode);
+        }
+
+        // 3. Wait until statusint.avail=1
+        if (ret_val == RET_OK)
+        {
+            ret_val = wait_for_statusint_bit(ppt_dev,
+                                             0x01,
+                                             QMI86_REG_STATUSINT_AVAIL_POS);
+        }
+
+        // 4. Wait until statusint.locked=1
+        if (ret_val == RET_OK)
+        {
+            ret_val = wait_for_statusint_bit(ppt_dev,
+                                             0x01,
+                                             QMI86_REG_STATUSINT_LOCKED_POS);
+        }
+
+        // return
+    }
+    else
+    {
+        // 1. Disable locking mechanism
+        if (ret_val == RET_OK)
+        {
+            reg_data =
+              QMI_OWR_BITS(ctrl7_bkp, QMI86_REG_CTRL7_SYNC_SAMPLE, 0x00);
+            ret_val = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL7);
+        }
+        if (ret_val == RET_OK)
+        {
+            ret_val = enable_sensor(ppt_dev, QMI86_SENSOR_DISABLE);
+        }
+
+        // // 2. Enable internal AHB
+        // if (ret_val == RET_OK)
+        // {
+        //     reg_data = 0x00;
+        //     ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CAL1_L);
+        // }
+
+        // if (ret_val == RET_OK)
+        // {
+        //     ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING, 2000U);
+        // }
+    }
+
+    return ret_val;
+}
+
+response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev)
+{
+    ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
+
+    response_status_t ret_val       = RET_OK;
+    uint8_t           regs_data[12] = { 0x00 };
+    int16_t gyro_raw_data[3] = {0x00};
+    int16_t acc_raw_data[3] = {0x00};
+
+    ret_val = set_data_regs_lock(ppt_dev, TRUE);
+
+    if (ret_val == RET_OK)
+    {
+        ret_val = read_register(ppt_dev,
+                                regs_data,
+                                ARRAY_SIZE(regs_data),
+                                QMI86_REG_AX_L);
+    }
+
+    if (ret_val == RET_OK)
+    {
+        acc_raw_data[0] = BYTES_TO_WORD(signed, regs_data[0], regs_data[1]);
+        acc_raw_data[1] = BYTES_TO_WORD(signed, regs_data[2], regs_data[3]);
+        acc_raw_data[2] = BYTES_TO_WORD(signed, regs_data[4], regs_data[5]);
+
+        gyro_raw_data[0] = BYTES_TO_WORD(signed, regs_data[6], regs_data[7]);
+        gyro_raw_data[1] = BYTES_TO_WORD(signed, regs_data[8], regs_data[9]);
+        gyro_raw_data[2] = BYTES_TO_WORD(signed, regs_data[10], regs_data[11]);
+
+        ppt_dev->data.gyro.x = (float)gyro_raw_data[0] / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
+        ppt_dev->data.gyro.y = (float)gyro_raw_data[1] / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
+        ppt_dev->data.gyro.z = (float)gyro_raw_data[2] / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
+
+        ppt_dev->data.accel.x = (float)acc_raw_data[0] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
+        ppt_dev->data.accel.y = (float)acc_raw_data[1] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
+        ppt_dev->data.accel.z = (float)acc_raw_data[2] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
+    }
+
+    if (ret_val == RET_OK)
+    {
+        ret_val = set_data_regs_lock(ppt_dev, FALSE);
+    }
+
+    return ret_val;
 }
 
 response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id)
@@ -807,8 +986,8 @@ response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id)
             && init_dev_regs(pt_curr_dev) == RET_OK)
         {
             pt_curr_drv->is_initialized = TRUE;
-            ret_val |= read_firmware_version(pt_curr_dev);
-            ret_val |= read_chip_id(pt_curr_dev);
+            ret_val                    |= read_firmware_version(pt_curr_dev);
+            ret_val                    |= read_chip_id(pt_curr_dev);
             ret_val |= dd_qmi86_get_data_settings(pt_curr_dev);
             ret_val |= dd_qmi86_get_interface_settings(pt_curr_dev);
             ret_val |= dd_qmi86_get_interrupt_settings(pt_curr_dev);
