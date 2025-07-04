@@ -21,3 +21,4 @@ build/
 .settings/
 
 .*project
+*.launch

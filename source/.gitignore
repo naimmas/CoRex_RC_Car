@@ -4,3 +4,4 @@ build/
 .project
 *.launch
 .settings/
+Debug/
