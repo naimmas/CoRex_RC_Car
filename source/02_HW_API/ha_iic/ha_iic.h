@@ -28,7 +28,7 @@
  * 7-bit address.
  */
 #define IIC_DEFINE_CONNECTION(port, dev_idx, dev_addrs) \
-    BYTES_TO_WORD(dev_addrs, port)
+    BYTES_TO_WORD(unsigned, dev_addrs, port)
 
 /**
  * @brief This macro retrieves the I2C device port number from the encoded port
