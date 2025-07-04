@@ -80,6 +80,8 @@
 
 /** @brief Motion Detection Control */
 #define QMI86_REG_CTRL8 (0x9)
+#define QMI86_REG_CTRL8_CTRL9_HANDSHAKE_POS (0x07)
+#define QMI86_REG_CTRL8_CTRL9_HANDSHAKE_MSK (0x80)
 
 /** @brief Host Commands */
 #define QMI86_REG_CTRL9 (0x0A)
@@ -137,7 +139,8 @@
 /** @brief FIFO Data */
 #define QMI86_REG_FIFO_DATA (0x17)
 
-/** @brief Sensor Data Availability with the Locking mechanism, CmdDone (CTRL9 protocol bit). */
+/** @brief Sensor Data Availability with the Locking mechanism, CmdDone (CTRL9
+ * protocol bit). */
 #define QMI86_REG_STATUSINT (0x2D)
 #define QMI86_REG_STATUSINT_AVAIL_POS (0x00)
 #define QMI86_REG_STATUSINT_AVAIL_MSK (0x01)
@@ -154,7 +157,8 @@
 
 #define QMI86_REG_STATUS0_GDA_POS (0x01)
 #define QMI86_REG_STATUS0_GDA_MSK (0x02)
-/** @brief Miscellaneous Status: Any Motion, No Motion, Significant Motion, Pedometer, Tap. */
+/** @brief Miscellaneous Status: Any Motion, No Motion, Significant Motion,
+ * Pedometer, Tap. */
 #define QMI86_REG_STATUS1 (0x2F)
 
 /** @brief 24 Bits Sample Time Stamp */
@@ -245,7 +249,7 @@
 #define QMI86_RESET_SUCCESSFUL (0x80)
 
 #define QMI86_WHO_AM_I (0x05)
-#define QMI86_CHIP_ID (0x68)
+#define QMI86_CHIP_ID (0x7B)
 
 #define QMI86_IIC_ADDR_1 (0x6A)
 #define QMI86_IIC_ADDR_2 (0x6B)
