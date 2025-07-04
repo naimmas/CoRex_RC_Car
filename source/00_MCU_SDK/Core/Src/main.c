@@ -133,7 +133,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  SW_BREAK();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
