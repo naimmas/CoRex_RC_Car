@@ -5,9 +5,9 @@
 #include "ps_logger.h"
 
 #include "ha_uart/ha_uart.h"
+#include "stdio.h"
 #include "string.h"
 #include "su_string/su_string.h"
-#include "stdio.h"
 
 /***************************************************************************************************
  * Macro definitions.
@@ -302,7 +302,7 @@ void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name,
                          (uint8_t*)g_debug_msg,
                          bytes_written,
                          DEFAUL_UART_SEND_TIMEOUT);
-#elif (LOGGER_OUTPUT_CHANNEL == LOGGER_CHNL_DEBUG)                         
+#elif (LOGGER_OUTPUT_CHANNEL == LOGGER_CHNL_DEBUG)
         printf("%s", g_debug_msg);
 #else
 #error "Define logger channel"
