@@ -104,10 +104,12 @@ static response_status_t read_calib_data(bmp388_dev_t* ppt_dev)
     // NOLINTBEGIN
     if (ret_val == RET_OK)
     {
-        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[0U], reg_data[1U]));
+        temp_val =
+          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[0U], reg_data[1U]));
         pt_curr_driver->calib_data.nvm_par_t1 =
           temp_val / BMP388_CALIB_COEFF_T1;
-        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[2U], reg_data[3U]));
+        temp_val =
+          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[2U], reg_data[3U]));
         pt_curr_driver->calib_data.nvm_par_t2 =
           temp_val / BMP388_CALIB_COEFF_T2;
         temp_val = (meas_data_t)((int8_t)reg_data[4U]);
@@ -127,10 +129,12 @@ static response_status_t read_calib_data(bmp388_dev_t* ppt_dev)
         temp_val = (meas_data_t)((int8_t)reg_data[10U]);
         pt_curr_driver->calib_data.nvm_par_p4 =
           temp_val / BMP388_CALIB_COEFF_P4;
-        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[11U], reg_data[12U]));
+        temp_val =
+          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[11U], reg_data[12U]));
         pt_curr_driver->calib_data.nvm_par_p5 =
           temp_val / BMP388_CALIB_COEFF_P5;
-        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[13U], reg_data[14U]));
+        temp_val =
+          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[13U], reg_data[14U]));
         pt_curr_driver->calib_data.nvm_par_p6 =
           temp_val / BMP388_CALIB_COEFF_P6;
         temp_val = (meas_data_t)((int8_t)reg_data[15U]);
@@ -323,7 +327,8 @@ static bmp388_status_t read_sens_time(bmp388_dev_t* ppt_dev)
     if (api_ret_val == RET_OK)
     {
         ret_val                  = BMP388_NO_ERROR;
-        ppt_dev->data.sensortime = BYTES_TO_DWORD(unsigned, time_reg_data[0U],
+        ppt_dev->data.sensortime = BYTES_TO_DWORD(unsigned,
+                                                  time_reg_data[0U],
                                                   time_reg_data[1U],
                                                   time_reg_data[2U],
                                                   0U);
@@ -368,7 +373,8 @@ static bmp388_status_t read_pressure(bmp388_dev_t* ppt_dev)
         if (api_ret_val == RET_OK)
         {
             pt_curr_driver->raw_data.pressure =
-              BYTES_TO_DWORD(unsigned, pres_reg_data[0U],
+              BYTES_TO_DWORD(unsigned,
+                             pres_reg_data[0U],
                              pres_reg_data[1U],
                              pres_reg_data[2U],
                              0U);
@@ -419,7 +425,8 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
         if (api_ret_val == RET_OK)
         {
             pt_curr_driver->raw_data.temperature =
-              BYTES_TO_DWORD(unsigned, temp_reg_data[0U],
+              BYTES_TO_DWORD(unsigned,
+                             temp_reg_data[0U],
                              temp_reg_data[1U],
                              temp_reg_data[2U],
                              0U);
