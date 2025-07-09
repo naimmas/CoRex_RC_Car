@@ -1,19 +1,27 @@
 BUILD_TYPE ?= Debug
 
-TOOLS_DIR = $(shell pwd)/tools
-TESTS_DIR = $(shell pwd)/tests
-SRC_DIR = $(shell pwd)/source
-LOGS_DIR = $(shell pwd)/build/logs
+TOOLS_DIR := $(shell pwd)/tools
+TESTS_DIR := $(shell pwd)/tests
+SRC_DIR := $(shell pwd)/source
+LOGS_DIR := $(shell pwd)/build/logs
 BUILD_DIR := $(shell pwd)/build/source/$(MCU)/$(BUILD_TYPE)
 
-SOURCE_FILES = $(shell find $(SRC_DIR)/ \
-  			\( -type d \( -wholename $(SRC_DIR)/00_MCU_SDK -o -wholename $(SRC_DIR)/01_MCU_PORT \) -prune -false \) \
-  			-o \( -name '*.c' -o -name '*.h' \) && find $(SRC_DIR)/01_MCU_PORT/$(MCU) \( -name '*.c' -o -name '*.h' \))
+IGNORE_FILE = .makeignore
+IGNORES_LIST := $(shell awk 'NF && $$1 !~ /^\#/' $(IGNORE_FILE))
+PRUNE_EXPR := $(if $(IGNORES_LIST),$(foreach p,$(IGNORES_LIST),-path $(SRC_DIR)/$(p) -o) -false,-false)
+IGNORE_REGEX  := $(shell \
+        printf '%s\n' $(IGNORES_LIST) \
+        | sed 's/[][().?+*^$$|{}\\]/\\&/g' \
+        | paste -sd'|' - )
+
+SOURCE_FILES := $(shell find $(SRC_DIR)/ \
+  			\( -type d \( $(PRUNE_EXPR) \) -prune -false \) \
+  			-o \( -name '*.c' -o -name '*.h' \))
 
 TEST_FILES = $(shell find $(TESTS_DIR)/ \
 			\( -type d -wholename $(TESTS_DIR)/support -prune -false \) -o \( -name '*.c' -o -name '*.h' \))
 
-CLT_HEADER_FILTER=^.*00_MCU_SDK.*$$
+CLT_HEADER_FILTER='^.*($(IGNORE_REGEX)).*'
 
 .make-prechecks:
 	@if [ ! -d "$(LOGS_DIR)" ]; then \
