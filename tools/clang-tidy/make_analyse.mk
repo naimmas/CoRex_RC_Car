@@ -6,9 +6,9 @@ CLANG_TIDY_CFG := $(CLANG_DIR)/configs
 CLT_OPTIONS :=  --header-filter=.* \
 				--exclude-header-filter=${CLT_HEADER_FILTER} \
 				-p $(BUILD_DIR)/compile_commands.json \
-				--extra-arg=-isystem/usr/include/ \
-				--extra-arg=-isystem/usr/lib/gcc/$(shell uname -m)-linux-gnu/13/include \
-				--extra-arg=-isystem/usr/include/$(shell uname -m)-linux-gnu/ \
+				--extra-arg=--target=arm-none-eabi \
+				--extra-arg=-mcpu=cortex-m4 \
+				--extra-arg=--sysroot=/opt/arm-gnu-toolchain/arm-none-eabi \
 				$(CLT_FLAGS) \
 				$(SOURCE_FILES) 2> /dev/null | tee -a $(BUILD_DIR)/clang-tidy.txt
 
