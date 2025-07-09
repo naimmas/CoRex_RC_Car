@@ -74,21 +74,6 @@ RUN mkdir -p /opt/cmake \
 #Check cmake
 RUN cmake --version
 
-#Install RP2040 toolchain
-RUN git clone --branch 2.1.1 --single-branch https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk
-RUN git clone --branch 2.1.1 --single-branch https://github.com/raspberrypi/picotool.git /tmp/picotool
-
-WORKDIR /opt/pico-sdk
-RUN git submodule update --init --recursive
-ENV PICO_SDK_PATH=/opt/pico-sdk
-
-WORKDIR /tmp/picotool
-RUN mkdir build
-WORKDIR /tmp/picotool/build
-RUN cmake -DCMAKE_INSTALL_PREFIX=/opt/picobuild -DPICOTOOL_FLAT_INSTALL=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
-RUN make -j$(nproc) install
-ENV PICO_TOOL_PATH=/opt/picobuild/picotool/
-
 #Clean up tmp
 RUN rm -rf /tmp/*
 #Clean up apt cache
