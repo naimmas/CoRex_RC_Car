@@ -2,6 +2,7 @@
 
 #include "unity.h"
 #include "mock_ha_iic.h"
+#include "mock_ha_timer.h"
 #include "dd_qmi86.h"
 #include "dd_qmi86_defs.h"
 
