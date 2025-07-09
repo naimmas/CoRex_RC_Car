@@ -13,10 +13,12 @@
 #define BYTE_N(x, n)    ((uint8_t)(((x) >> (8*(n))) & 0xFF))
 
 /* Combine bytes */
-#define BYTES_TO_WORD(sign, lo, hi)           ((sign short)(BYTE_LOW(lo) | ((sign short)BYTE_LOW(hi) << 8)))
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
+#define BYTES_TO_WORD(sign, lo, hi)           ((sign short)(BYTE_LOW(lo) | ((sign short)BYTE_LOW(hi) << 8))) //NOLINT
 
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define BYTES_TO_DWORD(sign, b0, b1, b2, b3)    ((sign int)(BYTE_LOW(b0) | ((sign int)BYTE_LOW(b1) << 8) | \
-                                    ((sign int)BYTE_LOW(b2) << 16) | ((sign int)BYTE_LOW(b3) << 24)))
+                                    ((sign int)BYTE_LOW(b2) << 16) | ((sign int)BYTE_LOW(b3) << 24))) //NOLINT
 
 /*  byte-swap */
 #define BYTE_SWAP16(x)  ((uint16_t)(((x) >> 8) | ((x) << 8)))
