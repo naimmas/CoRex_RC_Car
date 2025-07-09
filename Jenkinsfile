@@ -87,7 +87,7 @@ pipeline {
             recordIssues(
                 name: "Static Analyse",
                 enabledForFailure: true,
-                tool: clangTidy(pattern: "build/source/${BUILD_TYPE}/clang-tidy.log")
+                tool: clangTidy(pattern: "build/source/${BUILD_TYPE}/clang-tidy.txt")
             )
             junit (
                 testResults: "build/logs/junit_tests_report.xml",
@@ -96,7 +96,7 @@ pipeline {
             )
             recordCoverage(
                 tools: [[parser: "COBERTURA",
-                    pattern: "build/logs/TestCoverageReport.xml"]]
+                    pattern: "build/logs/GcovCoverage.json"]]
             )
         }
     }
