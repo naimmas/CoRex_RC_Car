@@ -41,8 +41,8 @@ typedef struct st_driver
     qmi86_sensor_mode dev_mode;
     uint8_t           dev_id;
     bool_t            is_initialized;
-    uint16_t acc_sensitivity;
-    uint16_t gyro_sensitivity;
+    uint16_t          acc_sensitivity;
+    uint16_t          gyro_sensitivity;
 } driver_t;
 
 static driver_t g_driver[QMI86_DEV_CNT];
@@ -444,8 +444,8 @@ static qmi86_st_result self_test_accel(qmi86_dev_t* ppt_dev)
         st_y_mg = BYTES_TO_WORD(signed, st_result[2], st_result[3]);
         st_z_mg = BYTES_TO_WORD(signed, st_result[4], st_result[5]);
 
-        if (abs(st_x_mg) > (200U * 2U) && abs(st_y_mg) > (200U * 2U)
-            && abs(st_z_mg) > (200U * 2U))
+        if (abs(st_x_mg) > (200 * 2) && abs(st_y_mg) > (200 * 2)
+            && abs(st_z_mg) > (200 * 2))
         {
             ret_val = QMI86_ST_RESULT_OK;
         }
@@ -492,7 +492,9 @@ response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev)
 
     if (ret_val == RET_OK)
     {
-        ((driver_t*)ppt_dev)->acc_sensitivity = (1 << (ACC_SCALE_SENSITIVITY_MAX - ppt_dev->settings.data_settings.acc_fsr));
+        ((driver_t*)ppt_dev)->acc_sensitivity =
+          (1 << (ACC_SCALE_SENSITIVITY_MAX
+                 - ppt_dev->settings.data_settings.acc_fsr));
 
         reg_data = QMI_OWR_BITS(reg_data,
                                 QMI86_REG_CTRL3_GFS,
@@ -505,7 +507,9 @@ response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev)
 
     if (ret_val == RET_OK)
     {
-        ((driver_t*)ppt_dev)->gyro_sensitivity = (1 << (GYRO_SCALE_SENSITIVITY_MAX - ppt_dev->settings.data_settings.gyro_fsr));
+        ((driver_t*)ppt_dev)->gyro_sensitivity =
+          (1 << (GYRO_SCALE_SENSITIVITY_MAX
+                 - ppt_dev->settings.data_settings.gyro_fsr));
 
         reg_data = QMI_OWR_BITS(reg_data,
                                 QMI86_REG_CTRL5_ALPF_EN,
@@ -521,7 +525,6 @@ response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev)
                                 ppt_dev->settings.data_settings.gyro_lpf_mode);
         ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CTRL5);
     }
-
 
     return ret_val;
 }
@@ -853,12 +856,14 @@ static response_status_t set_data_regs_lock(qmi86_dev_t* ppt_dev,
         // if (ret_val == RET_OK)
         // {
         //     reg_data = 0x01;
-        //     ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CAL1_L);
+        //     ret_val  = write_register(ppt_dev, &reg_data, 1,
+        //     QMI86_REG_CAL1_L);
         // }
 
         // if (ret_val == RET_OK)
         // {
-        //     ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING, 2000U);
+        //     ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING,
+        //     2000U);
         // }
 
         // 2. Enable locking mechanism
@@ -909,12 +914,14 @@ static response_status_t set_data_regs_lock(qmi86_dev_t* ppt_dev,
         // if (ret_val == RET_OK)
         // {
         //     reg_data = 0x00;
-        //     ret_val  = write_register(ppt_dev, &reg_data, 1, QMI86_REG_CAL1_L);
+        //     ret_val  = write_register(ppt_dev, &reg_data, 1,
+        //     QMI86_REG_CAL1_L);
         // }
 
         // if (ret_val == RET_OK)
         // {
-        //     ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING, 2000U);
+        //     ret_val = exec_ctrl9_cmd(ppt_dev, CTRL_CMD_AHB_CLOCK_GATING,
+        //     2000U);
         // }
     }
 
@@ -925,10 +932,10 @@ response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
 
-    response_status_t ret_val       = RET_OK;
-    uint8_t           regs_data[12] = { 0x00 };
-    int16_t gyro_raw_data[3] = {0x00};
-    int16_t acc_raw_data[3] = {0x00};
+    response_status_t ret_val          = RET_OK;
+    uint8_t           regs_data[12]    = { 0x00 };
+    int16_t           gyro_raw_data[3] = { 0x00 };
+    int16_t           acc_raw_data[3]  = { 0x00 };
 
     ret_val = set_data_regs_lock(ppt_dev, TRUE);
 
@@ -950,13 +957,19 @@ response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev)
         gyro_raw_data[1] = BYTES_TO_WORD(signed, regs_data[8], regs_data[9]);
         gyro_raw_data[2] = BYTES_TO_WORD(signed, regs_data[10], regs_data[11]);
 
-        ppt_dev->data.gyro.x = (float)gyro_raw_data[0] / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
-        ppt_dev->data.gyro.y = (float)gyro_raw_data[1] / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
-        ppt_dev->data.gyro.z = (float)gyro_raw_data[2] / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
+        ppt_dev->data.gyro.x = (float)gyro_raw_data[0]
+                               / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
+        ppt_dev->data.gyro.y = (float)gyro_raw_data[1]
+                               / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
+        ppt_dev->data.gyro.z = (float)gyro_raw_data[2]
+                               / (float)((driver_t*)ppt_dev)->gyro_sensitivity;
 
-        ppt_dev->data.accel.x = (float)acc_raw_data[0] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
-        ppt_dev->data.accel.y = (float)acc_raw_data[1] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
-        ppt_dev->data.accel.z = (float)acc_raw_data[2] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
+        ppt_dev->data.accel.x =
+          (float)acc_raw_data[0] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
+        ppt_dev->data.accel.y =
+          (float)acc_raw_data[1] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
+        ppt_dev->data.accel.z =
+          (float)acc_raw_data[2] / (float)((driver_t*)ppt_dev)->acc_sensitivity;
     }
 
     if (ret_val == RET_OK)

@@ -202,7 +202,7 @@ typedef struct st_qmi86_dev
 
     struct st_qmi86_settings        settings;
     struct st_qmi86_clibration_data clib_params;
-    struct st_qmi86_data data;
+    struct st_qmi86_data            data;
 } qmi86_dev_t;
 
 typedef enum en_qmi86_dev_id
