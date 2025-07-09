@@ -1,0 +1,3 @@
+[submodule "source/03_DEV_DRV/dd_icm209"]
+	path = source/03_DEV_DRV/dd_icm209
+	url = https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary.git
