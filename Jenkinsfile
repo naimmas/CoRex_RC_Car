@@ -41,7 +41,7 @@ pipeline {
                 script {
                     sh "make cont-cov"
                     sh "cp build/artifacts/gcov/junit_tests_report.xml build/logs/junit_tests_report.xml"
-                    sh "cp build/artifacts/gcov/gcovr/GcovCoverage.json build/logs/GcovCoverage.json"
+                    sh "cp build/artifacts/gcov/gcovr/TestCoverageReport.xml build/logs/TestCoverageReport.xml"
                 }
             }
         }
@@ -96,7 +96,7 @@ pipeline {
             )
             recordCoverage(
                 tools: [[parser: "COBERTURA",
-                    pattern: "build/logs/GcovCoverage.json"]]
+                    pattern: "build/logs/TestCoverageReport.xml"]]
             )
         }
     }
