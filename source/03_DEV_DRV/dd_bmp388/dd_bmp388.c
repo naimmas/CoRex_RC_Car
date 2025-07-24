@@ -313,8 +313,16 @@ static bmp388_status_t read_pressure(bmp388_dev_t* ppt_dev)
     bool_t            pres_rdy                                = FALSE;
     driver_t*         pt_curr_driver                          = (driver_t*)ppt_dev;
     uint8_t           pres_reg_data[BMP388_REG_DATA_PRES_LEN] = { 0U };
-
-    api_ret_val = get_data_state(ppt_dev, &temp_rdy, &pres_rdy);
+    //If the interrupt is enabled and thie function is called
+    //we assume that the data is ready
+    if (ppt_dev->settings.int_settings.int_enable & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    {
+        pres_rdy = TRUE;
+    }
+    else
+    {
+        api_ret_val = get_data_state(ppt_dev, &temp_rdy, &pres_rdy);
+    }
 
     if (api_ret_val != RET_OK)
     {
@@ -359,8 +367,17 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
     driver_t*         pt_curr_driver = (driver_t*)ppt_dev;
 
     uint8_t temp_reg_data[BMP388_REG_DATA_TEMP_LEN] = { 0U };
-
-    api_ret_val = get_data_state(ppt_dev, &temp_rdy, &pres_rdy);
+    
+    //If the interrupt is enabled and thie function is called
+    //we assume that the data is ready
+    if (ppt_dev->settings.int_settings.int_enable & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    {
+        pres_rdy = TRUE;
+    }
+    else
+    {
+        api_ret_val = get_data_state(ppt_dev, &temp_rdy, &pres_rdy);
+    }
 
     if (api_ret_val != RET_OK)
     {
@@ -419,6 +436,22 @@ static response_status_t send_cmd(bmp388_dev_t* ppt_dev, bmp388_cmds p_cmd, uint
     }
 
     return ret_val;
+}
+
+static bool_t is_data_rdy(bmp388_dev_t* ppt_dev)
+{
+    response_status_t api_ret_val = RET_OK;
+    uint8_t           reg_val     = 0x00;
+    bool_t            data_rdy    = FALSE;
+
+    api_ret_val = read_register(ppt_dev, &reg_val, DEFAULT_IIC_REG_SZ, BMP388_REG_INT_STATUS);
+
+    if (api_ret_val == RET_OK)
+    {
+        data_rdy = BMP3_GET_BITS(reg_val, BMP388_REG_INT_STATUS_DRDY) == 0x01;
+    }
+
+    return data_rdy;
 }
 
 /**
@@ -652,49 +685,46 @@ bmp388_status_t dd_bmp388_get_data(bmp388_dev_t* ppt_dev, bmp388_data_request_t 
     uint8_t           reg_val     = 0x00;
     bool_t            data_rdy    = FALSE;
 
-    api_ret_val = read_register(ppt_dev, &reg_val, DEFAULT_IIC_REG_SZ, BMP388_REG_INT_STATUS);
-
-    if (api_ret_val == RET_OK)
+    if (ppt_dev->settings.int_settings.int_enable & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
     {
-        data_rdy = BMP3_GET_BITS(reg_val, BMP388_REG_INT_STATUS_DRDY) == 0x01;
-
-        if (data_rdy == TRUE)
+        data_rdy = is_data_rdy(ppt_dev);
+    }
+    else
+    {
+        data_rdy = TRUE;
+    }
+    if (data_rdy)
+    {
+        if (p_data_req & BMP388_READ_TIME)
         {
-            if (p_data_req & BMP388_READ_TIME)
-            {
-                ret_val = read_sens_time(ppt_dev);
-            }
-
-            /**
-             * @note If any of the pressure or temperature data is requested,
-             * we need to read temperature for compensation and then if
-             * pressure is requested, we read pressure data.
-             * If only temperature is requested, we don't read pressure data.
-             */
-            if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESS_TEMP))
-            {
-                ret_val = read_temp(ppt_dev);
-            }
-
-            if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESSURE))
-            {
-                ret_val = read_pressure(ppt_dev);
-            }
-
-            /// if temperature data is not requested, we set it to 0
-            if (!(p_data_req & BMP388_READ_TEMP))
-            {
-                ppt_dev->data.temperature = 0U;
-            }
+            ret_val = read_sens_time(ppt_dev);
         }
-        else
+
+        /**
+         * @note If any of the pressure or temperature data is requested,
+         * we need to read temperature for compensation and then if
+         * pressure is requested, we read pressure data.
+         * If only temperature is requested, we don't read pressure data.
+         */
+        if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESS_TEMP))
         {
-            ret_val = BMP388_WAITING_DATA;
+            ret_val = read_temp(ppt_dev);
+        }
+
+        if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESSURE))
+        {
+            ret_val = read_pressure(ppt_dev);
+        }
+
+        /// if temperature data is not requested, we set it to 0
+        if (!(p_data_req & BMP388_READ_TEMP))
+        {
+            ppt_dev->data.temperature = 0U;
         }
     }
     else
     {
-        ret_val = BMP388_ERROR_API;
+        ret_val = BMP388_WAITING_DATA;
     }
     return ret_val;
 }
