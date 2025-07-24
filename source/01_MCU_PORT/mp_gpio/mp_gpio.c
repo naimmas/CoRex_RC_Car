@@ -12,9 +12,7 @@ typedef struct st_stm32_gpio_driver
     const uint16_t*       pin;
 } stm32_gpio_driver_t;
 
-static stm32_gpio_driver_t g_driver = { .base = { 0U },
-                                        .port = NULL,
-                                        .pin  = NULL };
+static stm32_gpio_driver_t g_driver = { .base = { 0U }, .port = NULL, .pin = NULL };
 
 static response_status_t init(void)
 {
@@ -47,30 +45,25 @@ static response_status_t init(void)
 
 static response_status_t write(uint8_t p_pin, bool_t p_value)
 {
-    ASSERT_AND_RETURN(g_driver.pin == NULL || g_driver.port == NULL,
-                      RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_driver.pin == NULL || g_driver.port == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_pin >= g_driver.base.hw_pin_cnt, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    HAL_GPIO_WritePin(g_driver.port[p_pin],
-                      g_driver.pin[p_pin],
-                      (uint8_t)p_value);
+    HAL_GPIO_WritePin(g_driver.port[p_pin], g_driver.pin[p_pin], (uint8_t)p_value);
 
     return ret_val;
 }
 
 static response_status_t read(uint8_t p_pin, bool_t* ppt_value)
 {
-    ASSERT_AND_RETURN(g_driver.pin == NULL || g_driver.port == NULL,
-                      RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_driver.pin == NULL || g_driver.port == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_pin >= g_driver.base.hw_pin_cnt, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(ppt_value == NULL, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    GPIO_PinState pin_state =
-      HAL_GPIO_ReadPin(g_driver.port[p_pin], g_driver.pin[p_pin]);
+    GPIO_PinState pin_state = HAL_GPIO_ReadPin(g_driver.port[p_pin], g_driver.pin[p_pin]);
 
     if (pin_state == GPIO_PIN_SET)
     {
@@ -86,8 +79,7 @@ static response_status_t read(uint8_t p_pin, bool_t* ppt_value)
 
 static response_status_t toggle(uint8_t p_pin)
 {
-    ASSERT_AND_RETURN(g_driver.pin == NULL || g_driver.port == NULL,
-                      RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_driver.pin == NULL || g_driver.port == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_pin >= g_driver.base.hw_pin_cnt, RET_PARAM_ERROR);
 
     HAL_GPIO_TogglePin(g_driver.port[p_pin], g_driver.pin[p_pin]);

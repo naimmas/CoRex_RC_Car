@@ -53,8 +53,8 @@
 #define BMP388_REG_INT_STATUS_FFULL_POS     (0x01)
 #define BMP388_REG_INT_STATUS_FFULL_MSK     (0x02)
 
-#define BMP388_REG_INT_STATUS_DRDY_POS     (0x04)
-#define BMP388_REG_INT_STATUS_DRDY_MSK     (0x10)
+#define BMP388_REG_INT_STATUS_DRDY_POS     (0x03)
+#define BMP388_REG_INT_STATUS_DRDY_MSK     (0x08)
 
 /** @brief 9Bit FIFO fill level
  * @note data is split into 2 registers.

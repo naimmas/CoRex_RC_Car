@@ -19,11 +19,9 @@ static bool_t     g_driver_initialized = FALSE;
  * be zero.
  * @return Result of the execution status.
  */
-response_status_t ha_iic_master_write(iic_comm_port_t p_port,
-                                      uint8_t         p_slave_addr,
-                                      uint8_t*        ppt_data_buffer,
-                                      size_t          p_data_size,
-                                      timeout_t       p_timeout_ms)
+response_status_t ha_iic_master_write(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                      uint8_t* ppt_data_buffer, size_t p_data_size,
+                                      timeout_t p_timeout_ms)
 {
     ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
@@ -33,11 +31,8 @@ response_status_t ha_iic_master_write(iic_comm_port_t p_port,
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->write(p_port,
-                                      p_slave_addr,
-                                      ppt_data_buffer,
-                                      p_data_size,
-                                      p_timeout_ms);
+    ret_val =
+      g_pt_driver->api->write(p_port, p_slave_addr, ppt_data_buffer, p_data_size, p_timeout_ms);
 
     return ret_val;
 }
@@ -54,10 +49,9 @@ response_status_t ha_iic_master_write(iic_comm_port_t p_port,
  * be zero.
  * @return Result of the execution status.
  */
-response_status_t ha_iic_master_read(iic_comm_port_t p_port,
-                                     uint8_t         p_slave_addr,
-                                     uint8_t*        ppt_data_buffer,
-                                     size_t p_data_size, timeout_t p_timeout_ms)
+response_status_t ha_iic_master_read(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                     uint8_t* ppt_data_buffer, size_t p_data_size,
+                                     timeout_t p_timeout_ms)
 {
     ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
@@ -67,11 +61,8 @@ response_status_t ha_iic_master_read(iic_comm_port_t p_port,
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->read(p_port,
-                                     p_slave_addr,
-                                     ppt_data_buffer,
-                                     p_data_size,
-                                     p_timeout_ms);
+    ret_val =
+      g_pt_driver->api->read(p_port, p_slave_addr, ppt_data_buffer, p_data_size, p_timeout_ms);
 
     return ret_val;
 }
@@ -90,10 +81,10 @@ response_status_t ha_iic_master_read(iic_comm_port_t p_port,
  * be zero.
  * @return Result of the execution status.
  */
-response_status_t ha_iic_master_mem_write(
-  iic_comm_port_t p_port, uint8_t p_slave_addr, uint8_t* ppt_data_buffer,
-  size_t p_data_size, uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
-  timeout_t p_timeout_ms)
+response_status_t ha_iic_master_mem_write(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                          uint8_t* ppt_data_buffer, size_t p_data_size,
+                                          uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
+                                          timeout_t p_timeout_ms)
 {
     ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
@@ -129,10 +120,10 @@ response_status_t ha_iic_master_mem_write(
  * be zero.
  * @return Result of the execution status.
  */
-response_status_t ha_iic_master_mem_read(
-  iic_comm_port_t p_port, uint8_t p_slave_addr, uint8_t* ppt_data_buffer,
-  size_t p_data_size, uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
-  timeout_t p_timeout_ms)
+response_status_t ha_iic_master_mem_read(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                         uint8_t* ppt_data_buffer, size_t p_data_size,
+                                         uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
+                                         timeout_t p_timeout_ms)
 {
     ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);

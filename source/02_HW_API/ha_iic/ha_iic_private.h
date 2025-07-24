@@ -35,8 +35,7 @@ struct st_iic_driver_ifc
      * @param[in] timeout_t The timeout for the operation in milliseconds.
      * @return Result of the execution status.
      */
-    response_status_t (*write)(uint8_t, uint8_t, const uint8_t*, size_t,
-                               timeout_t);
+    response_status_t (*write)(uint8_t, uint8_t, const uint8_t*, size_t, timeout_t);
     /**
      * @brief This function shall request data from an I2C device.
      * @param[in] uint8_t The index of the I2C interface to use.
@@ -47,8 +46,7 @@ struct st_iic_driver_ifc
      * @param[in] timeout_t The timeout for the operation in milliseconds.
      * @return Result of the execution status.
      */
-    response_status_t (*read)(uint8_t, uint8_t, uint8_t* const, size_t,
-                              timeout_t);
+    response_status_t (*read)(uint8_t, uint8_t, uint8_t* const, size_t, timeout_t);
     /**
      * @brief This function shall write data to a specific memory address of an
      * I2C device.
@@ -62,8 +60,8 @@ struct st_iic_driver_ifc
      * @param[in] timeout_t The timeout for the operation in milliseconds.
      * @return Result of the execution status.
      */
-    response_status_t (*mem_write)(uint8_t, uint8_t, uint16_t, uint8_t,
-                                   const uint8_t*, size_t, timeout_t);
+    response_status_t (*mem_write)(uint8_t, uint8_t, uint16_t, uint8_t, const uint8_t*, size_t,
+                                   timeout_t);
     /**
      * @brief This function shall read data from a specific memory address of an
      * I2C device.
@@ -77,8 +75,8 @@ struct st_iic_driver_ifc
      * @param[in] timeout_t The timeout for the operation in milliseconds.
      * @return Result of the execution status.
      */
-    response_status_t (*mem_read)(uint8_t, uint8_t, uint16_t, uint8_t,
-                                  uint8_t* const, size_t, timeout_t);
+    response_status_t (*mem_read)(uint8_t, uint8_t, uint16_t, uint8_t, uint8_t* const, size_t,
+                                  timeout_t);
     /**
      * @brief This function shall recover the stalled I2C bus.
      * It should clocking the SCL multiple times to free up the bus.

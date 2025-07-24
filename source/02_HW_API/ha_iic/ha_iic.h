@@ -65,24 +65,20 @@ typedef enum en_iic_mem_size
 } i2c_mem_size_t;
 
 response_status_t ha_iic_init(void);
-response_status_t ha_iic_master_read(iic_comm_port_t p_port,
-                                     uint8_t         p_slave_addr,
-                                     uint8_t*        ppt_data_buffer,
-                                     size_t          p_data_size,
-                                     timeout_t       p_timeout_ms);
-response_status_t ha_iic_master_write(iic_comm_port_t p_port,
-                                      uint8_t         p_slave_addr,
-                                      uint8_t*        ppt_data_buffer,
-                                      size_t          p_data_size,
-                                      timeout_t       p_timeout_ms);
-response_status_t ha_iic_master_mem_read(
-  iic_comm_port_t p_port, uint8_t p_slave_addr, uint8_t* ppt_data_buffer,
-  size_t p_data_size, uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
-  timeout_t p_timeout_ms);
-response_status_t ha_iic_master_mem_write(
-  iic_comm_port_t p_port, uint8_t p_slave_addr, uint8_t* ppt_data_buffer,
-  size_t p_data_size, uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
-  timeout_t p_timeout_ms);
+response_status_t ha_iic_master_read(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                     uint8_t* ppt_data_buffer, size_t p_data_size,
+                                     timeout_t p_timeout_ms);
+response_status_t ha_iic_master_write(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                      uint8_t* ppt_data_buffer, size_t p_data_size,
+                                      timeout_t p_timeout_ms);
+response_status_t ha_iic_master_mem_read(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                         uint8_t* ppt_data_buffer, size_t p_data_size,
+                                         uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
+                                         timeout_t p_timeout_ms);
+response_status_t ha_iic_master_mem_write(iic_comm_port_t p_port, uint8_t p_slave_addr,
+                                          uint8_t* ppt_data_buffer, size_t p_data_size,
+                                          uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
+                                          timeout_t p_timeout_ms);
 response_status_t ha_iic_bus_recover(iic_comm_port_t p_port);
 response_status_t ha_iic_dev_check(iic_comm_port_t p_port, uint8_t p_dev_addr,
                                    timeout_t p_timeout_ms);

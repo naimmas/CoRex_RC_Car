@@ -19,9 +19,8 @@ static bool_t      g_driver_initialized = FALSE;
  * zero.
  * @return Result of the execution status.
  */
-response_status_t ha_uart_transmit(uart_comm_port_t p_port,
-                                   uint8_t* ppt_data_buffer, size_t p_data_size,
-                                   timeout_t p_timeout)
+response_status_t ha_uart_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
+                                   size_t p_data_size, timeout_t p_timeout)
 {
     ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
@@ -30,10 +29,7 @@ response_status_t ha_uart_transmit(uart_comm_port_t p_port,
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->transmit(p_port,
-                                         ppt_data_buffer,
-                                         p_data_size,
-                                         p_timeout);
+    ret_val = g_pt_driver->api->transmit(p_port, ppt_data_buffer, p_data_size, p_timeout);
     return ret_val;
 }
 
@@ -49,9 +45,8 @@ response_status_t ha_uart_transmit(uart_comm_port_t p_port,
  * zero.
  * @return Result of the execution status.
  */
-response_status_t ha_uart_receive(uart_comm_port_t p_port,
-                                  uint8_t* ppt_data_buffer, size_t p_data_size,
-                                  timeout_t p_timeout)
+response_status_t ha_uart_receive(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
+                                  size_t p_data_size, timeout_t p_timeout)
 {
     ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
@@ -60,10 +55,7 @@ response_status_t ha_uart_receive(uart_comm_port_t p_port,
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->receive(p_port,
-                                        ppt_data_buffer,
-                                        p_data_size,
-                                        p_timeout);
+    ret_val = g_pt_driver->api->receive(p_port, ppt_data_buffer, p_data_size, p_timeout);
 
     return ret_val;
 }

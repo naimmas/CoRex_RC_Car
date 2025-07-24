@@ -125,6 +125,7 @@ typedef enum en_bmp388_status
     BMP388_ERROR_API     = 0x10,
     BMP388_WAITING_TEMP  = 0x11,
     BMP388_WAITING_PRESS = 0x12,
+    BMP388_WAITING_DATA  = 0x13,
 } bmp388_status_t;
 
 struct st_bmp388_data
@@ -191,11 +192,10 @@ response_status_t dd_bmp388_get_data_settings(bmp388_dev_t* ppt_dev);
 response_status_t dd_bmp388_get_dev_settings(bmp388_dev_t* ppt_dev);
 response_status_t dd_bmp388_get_ifc_settings(bmp388_dev_t* ppt_dev);
 response_status_t dd_bmp388_get_interrupt_settings(bmp388_dev_t* ppt_dev);
-bmp388_status_t   dd_bmp388_get_data(bmp388_dev_t*         ppt_dev,
-                                     bmp388_data_request_t p_data_req);
+bmp388_status_t   dd_bmp388_get_data(bmp388_dev_t* ppt_dev, bmp388_data_request_t p_data_req);
 bmp388_status_t   dd_bmp388_get_error_state(bmp388_dev_t* ppt_dev);
+bmp388_status_t   dd_bmp388_reset(bmp388_dev_t* ppt_dev);
 bmp388_dev_t*     dd_bmp388_get_dev(bmp388_devices_t p_dev_id);
-response_status_t dd_bmp388_init(bmp388_dev_t**   ppt_dev,
-                                 bmp388_devices_t p_dev_id);
+response_status_t dd_bmp388_init(bmp388_dev_t** ppt_dev, bmp388_devices_t p_dev_id);
 
 #endif // DD_BMP388_H

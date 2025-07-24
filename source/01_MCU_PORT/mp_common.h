@@ -1,12 +1,11 @@
 #ifndef MP_COMMON_H
 #define MP_COMMON_H
 
-#include "stm32f4xx_hal.h" //NOLINT(misc-header-include-cycle,misc-include-cleaner)
+#include "stm32f4xx_hal.h"     //NOLINT(misc-header-include-cycle,misc-include-cleaner)
 #include "stm32f4xx_hal_def.h" //NOLINT(misc-header-include-cycle,misc-include-cleaner)
 #include "su_common.h"
 
-static inline response_status_t translate_hal_status(
-  HAL_StatusTypeDef p_hal_ret)
+static inline response_status_t translate_hal_status(HAL_StatusTypeDef p_hal_ret)
 {
     response_status_t ret_val = RET_OK;
 

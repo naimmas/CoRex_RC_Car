@@ -42,44 +42,37 @@ static response_status_t init(void)
     return ret_val;
 }
 
-static response_status_t read(uint8_t p_ifc_index, uint8_t* ppt_buffer,
-                              size_t p_buffer_sz, timeout_t p_timeout_ms)
+static response_status_t read(uint8_t p_ifc_index, uint8_t* ppt_buffer, size_t p_buffer_sz,
+                              timeout_t p_timeout_ms)
 {
     ASSERT_AND_RETURN(g_driver.hw_insts == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_ifc_index >= g_driver.base.hw_inst_cnt,
-                      RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(ppt_buffer == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(p_buffer_sz == 0, RET_PARAM_ERROR);
-
-    response_status_t ret_val = RET_OK;
-
-    HAL_StatusTypeDef hal_ret = HAL_UART_Receive(g_driver.hw_insts[p_ifc_index],
-                                                 ppt_buffer,
-                                                 p_buffer_sz,
-                                                 p_timeout_ms);
-
-    ret_val = translate_hal_status(hal_ret);
-
-    return ret_val;
-}
-
-static response_status_t write(uint8_t p_ifc_index, uint8_t* ppt_buffer,
-                               size_t p_buffer_sz, timeout_t p_timeout_ms)
-{
-
-    ASSERT_AND_RETURN(g_driver.hw_insts == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_ifc_index >= g_driver.base.hw_inst_cnt,
-                      RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_ifc_index >= g_driver.base.hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_buffer_sz == 0, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
     HAL_StatusTypeDef hal_ret =
-      HAL_UART_Transmit(g_driver.hw_insts[p_ifc_index],
-                        ppt_buffer,
-                        p_buffer_sz,
-                        p_timeout_ms);
+      HAL_UART_Receive(g_driver.hw_insts[p_ifc_index], ppt_buffer, p_buffer_sz, p_timeout_ms);
+
+    ret_val = translate_hal_status(hal_ret);
+
+    return ret_val;
+}
+
+static response_status_t write(uint8_t p_ifc_index, uint8_t* ppt_buffer, size_t p_buffer_sz,
+                               timeout_t p_timeout_ms)
+{
+
+    ASSERT_AND_RETURN(g_driver.hw_insts == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_ifc_index >= g_driver.base.hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(ppt_buffer == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_buffer_sz == 0, RET_PARAM_ERROR);
+
+    response_status_t ret_val = RET_OK;
+
+    HAL_StatusTypeDef hal_ret =
+      HAL_UART_Transmit(g_driver.hw_insts[p_ifc_index], ppt_buffer, p_buffer_sz, p_timeout_ms);
 
     ret_val = translate_hal_status(hal_ret);
 

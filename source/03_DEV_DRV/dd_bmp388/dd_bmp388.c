@@ -3,6 +3,7 @@
 
 #include "dd_bmp388_defs.h"
 #include "ha_iic/ha_iic.h"
+#include "ps_timer/ps_timer.h"
 #include "string.h"
 #include "su_common.h"
 
@@ -14,8 +15,7 @@
 #define BMP3_GET_BITS(reg_data, bitname) (((reg_data) & (bitname##_MSK)) >> (bitname##_POS))
 
 IIC_SETUP_PORT_CONNECTION(BMP388_DEV_CNT,
-                          IIC_DEFINE_CONNECTION(IIC_PORT1, BMP388_DEV_1,
-                                                BMP388_IIC_ADDR_1))
+                          IIC_DEFINE_CONNECTION(IIC_PORT1, BMP388_DEV_1, BMP388_IIC_ADDR_1))
 
 typedef struct st_driver
 {
@@ -25,6 +25,13 @@ typedef struct st_driver
     uint8_t                     dev_id;
     bool_t                      is_initialized;
 } driver_t;
+
+typedef enum
+{
+    BMP388_CMD_EXT_MODE_EN = 0x34,
+    BMP388_CMD_FIFO_FLUSH  = 0xB0,
+    BMP388_CMD_SOFT_RESET  = 0xB6,
+} bmp388_cmds;
 
 static driver_t g_driver[BMP388_DEV_CNT];
 
@@ -37,21 +44,19 @@ static driver_t g_driver[BMP388_DEV_CNT];
  * @param[in] p_reg_addr The register address to write to in the sensor.
  * @return Result of the execution status.
  */
-static response_status_t write_register(bmp388_dev_t* ppt_dev,
-                                        uint8_t* ppt_data, size_t p_data_sz,
+static response_status_t write_register(bmp388_dev_t* ppt_dev, uint8_t* ppt_data, size_t p_data_sz,
                                         uint8_t p_reg_addr)
 {
     response_status_t ret_val        = RET_OK;
     driver_t*         pt_curr_driver = (driver_t*)ppt_dev;
 
-    ret_val =
-      ha_iic_master_mem_write(IIC_GET_DEV_PORT(pt_curr_driver->dev_id),
-                              IIC_GET_DEV_ADDRESS(pt_curr_driver->dev_id),
-                              ppt_data,
-                              p_data_sz,
-                              p_reg_addr,
-                              HW_IIC_MEM_SZ_8BIT,
-                              DEFAULT_IIC_TIMEOUT);
+    ret_val = ha_iic_master_mem_write(IIC_GET_DEV_PORT(pt_curr_driver->dev_id),
+                                      IIC_GET_DEV_ADDRESS(pt_curr_driver->dev_id),
+                                      ppt_data,
+                                      p_data_sz,
+                                      p_reg_addr,
+                                      HW_IIC_MEM_SZ_8BIT,
+                                      DEFAULT_IIC_TIMEOUT);
 
     return ret_val;
 }
@@ -65,20 +70,19 @@ static response_status_t write_register(bmp388_dev_t* ppt_dev,
  * @param[in] p_reg_addr The register address to read from in the sensor.
  * @return Result of the execution status.
  */
-static response_status_t read_register(bmp388_dev_t* ppt_dev, uint8_t* ppt_data,
-                                       size_t p_data_sz, uint8_t p_reg_addr)
+static response_status_t read_register(bmp388_dev_t* ppt_dev, uint8_t* ppt_data, size_t p_data_sz,
+                                       uint8_t p_reg_addr)
 {
     response_status_t ret_val        = RET_OK;
     driver_t*         pt_curr_driver = (driver_t*)ppt_dev;
 
-    ret_val =
-      ha_iic_master_mem_read(IIC_GET_DEV_PORT(pt_curr_driver->dev_id),
-                             IIC_GET_DEV_ADDRESS(pt_curr_driver->dev_id),
-                             ppt_data,
-                             p_data_sz,
-                             p_reg_addr,
-                             HW_IIC_MEM_SZ_8BIT,
-                             DEFAULT_IIC_TIMEOUT);
+    ret_val = ha_iic_master_mem_read(IIC_GET_DEV_PORT(pt_curr_driver->dev_id),
+                                     IIC_GET_DEV_ADDRESS(pt_curr_driver->dev_id),
+                                     ppt_data,
+                                     p_data_sz,
+                                     p_reg_addr,
+                                     HW_IIC_MEM_SZ_8BIT,
+                                     DEFAULT_IIC_TIMEOUT);
 
     return ret_val;
 }
@@ -104,56 +108,37 @@ static response_status_t read_calib_data(bmp388_dev_t* ppt_dev)
     // NOLINTBEGIN
     if (ret_val == RET_OK)
     {
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[0U], reg_data[1U]));
-        pt_curr_driver->calib_data.nvm_par_t1 =
-          temp_val / BMP388_CALIB_COEFF_T1;
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[2U], reg_data[3U]));
-        pt_curr_driver->calib_data.nvm_par_t2 =
-          temp_val / BMP388_CALIB_COEFF_T2;
-        temp_val = (meas_data_t)((int8_t)reg_data[4U]);
-        pt_curr_driver->calib_data.nvm_par_t3 =
-          temp_val / BMP388_CALIB_COEFF_T3;
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(signed, reg_data[5U], reg_data[6U]));
+        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[0U], reg_data[1U]));
+        pt_curr_driver->calib_data.nvm_par_t1 = temp_val / BMP388_CALIB_COEFF_T1;
+        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[2U], reg_data[3U]));
+        pt_curr_driver->calib_data.nvm_par_t2 = temp_val / BMP388_CALIB_COEFF_T2;
+        temp_val                              = (meas_data_t)((int8_t)reg_data[4U]);
+        pt_curr_driver->calib_data.nvm_par_t3 = temp_val / BMP388_CALIB_COEFF_T3;
+        temp_val = (meas_data_t)(BYTES_TO_WORD(signed, reg_data[5U], reg_data[6U]));
         pt_curr_driver->calib_data.nvm_par_p1 =
           (temp_val - (meas_data_t)(1 << 14)) / BMP388_CALIB_COEFF_P1;
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(signed, reg_data[7U], reg_data[8U]));
+        temp_val = (meas_data_t)(BYTES_TO_WORD(signed, reg_data[7U], reg_data[8U]));
         pt_curr_driver->calib_data.nvm_par_p2 =
           (temp_val - (meas_data_t)(1 << 14)) / BMP388_CALIB_COEFF_P2;
-        temp_val = (meas_data_t)((int8_t)reg_data[9U]);
-        pt_curr_driver->calib_data.nvm_par_p3 =
-          temp_val / BMP388_CALIB_COEFF_P3;
-        temp_val = (meas_data_t)((int8_t)reg_data[10U]);
-        pt_curr_driver->calib_data.nvm_par_p4 =
-          temp_val / BMP388_CALIB_COEFF_P4;
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[11U], reg_data[12U]));
-        pt_curr_driver->calib_data.nvm_par_p5 =
-          temp_val / BMP388_CALIB_COEFF_P5;
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[13U], reg_data[14U]));
-        pt_curr_driver->calib_data.nvm_par_p6 =
-          temp_val / BMP388_CALIB_COEFF_P6;
-        temp_val = (meas_data_t)((int8_t)reg_data[15U]);
-        pt_curr_driver->calib_data.nvm_par_p7 =
-          temp_val / BMP388_CALIB_COEFF_P7;
-        temp_val = (meas_data_t)((int8_t)reg_data[16U]);
-        pt_curr_driver->calib_data.nvm_par_p8 =
-          temp_val / BMP388_CALIB_COEFF_P8;
-        temp_val =
-          (meas_data_t)(BYTES_TO_WORD(signed, reg_data[17U], reg_data[18U]));
-        pt_curr_driver->calib_data.nvm_par_p9 =
-          temp_val / BMP388_CALIB_COEFF_P9;
-        temp_val = (meas_data_t)((int8_t)reg_data[19U]);
-        pt_curr_driver->calib_data.nvm_par_p10 =
-          temp_val / BMP388_CALIB_COEFF_P10;
-        temp_val = (meas_data_t)((int8_t)reg_data[20U]);
-        pt_curr_driver->calib_data.nvm_par_p11 =
-          temp_val / BMP388_CALIB_COEFF_P11;
-        pt_curr_driver->calib_data.t_lin = 0.0f;
+        temp_val                              = (meas_data_t)((int8_t)reg_data[9U]);
+        pt_curr_driver->calib_data.nvm_par_p3 = temp_val / BMP388_CALIB_COEFF_P3;
+        temp_val                              = (meas_data_t)((int8_t)reg_data[10U]);
+        pt_curr_driver->calib_data.nvm_par_p4 = temp_val / BMP388_CALIB_COEFF_P4;
+        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[11U], reg_data[12U]));
+        pt_curr_driver->calib_data.nvm_par_p5 = temp_val / BMP388_CALIB_COEFF_P5;
+        temp_val = (meas_data_t)(BYTES_TO_WORD(unsigned, reg_data[13U], reg_data[14U]));
+        pt_curr_driver->calib_data.nvm_par_p6 = temp_val / BMP388_CALIB_COEFF_P6;
+        temp_val                              = (meas_data_t)((int8_t)reg_data[15U]);
+        pt_curr_driver->calib_data.nvm_par_p7 = temp_val / BMP388_CALIB_COEFF_P7;
+        temp_val                              = (meas_data_t)((int8_t)reg_data[16U]);
+        pt_curr_driver->calib_data.nvm_par_p8 = temp_val / BMP388_CALIB_COEFF_P8;
+        temp_val = (meas_data_t)(BYTES_TO_WORD(signed, reg_data[17U], reg_data[18U]));
+        pt_curr_driver->calib_data.nvm_par_p9  = temp_val / BMP388_CALIB_COEFF_P9;
+        temp_val                               = (meas_data_t)((int8_t)reg_data[19U]);
+        pt_curr_driver->calib_data.nvm_par_p10 = temp_val / BMP388_CALIB_COEFF_P10;
+        temp_val                               = (meas_data_t)((int8_t)reg_data[20U]);
+        pt_curr_driver->calib_data.nvm_par_p11 = temp_val / BMP388_CALIB_COEFF_P11;
+        pt_curr_driver->calib_data.t_lin       = 0.0f;
     }
     // NOLINTEND
     else
@@ -171,10 +156,8 @@ static response_status_t read_calib_data(bmp388_dev_t* ppt_dev)
  */
 static void compensate_pressure(bmp388_dev_t* ppt_dev)
 {
-    struct st_bmp388_calib_data* pt_calib_data =
-      &((driver_t*)ppt_dev)->calib_data;
-    meas_data_t raw_pres =
-      (meas_data_t)(((driver_t*)ppt_dev)->raw_data.pressure);
+    struct st_bmp388_calib_data* pt_calib_data = &((driver_t*)ppt_dev)->calib_data;
+    meas_data_t                  raw_pres = (meas_data_t)(((driver_t*)ppt_dev)->raw_data.pressure);
 
     meas_data_t partial_data1 = (meas_data_t)0;
     meas_data_t partial_data2 = (meas_data_t)0;
@@ -184,31 +167,22 @@ static void compensate_pressure(bmp388_dev_t* ppt_dev)
     meas_data_t partial_out2  = (meas_data_t)0;
 
     partial_data1 = pt_calib_data->nvm_par_p6 * pt_calib_data->t_lin;
-    partial_data2 =
-      pt_calib_data->nvm_par_p7 * (pt_calib_data->t_lin * pt_calib_data->t_lin);
-    partial_data3 =
-      pt_calib_data->nvm_par_p8
-      * (pt_calib_data->t_lin * pt_calib_data->t_lin * pt_calib_data->t_lin);
-    partial_out1 =
-      pt_calib_data->nvm_par_p5 + partial_data1 + partial_data2 + partial_data3;
+    partial_data2 = pt_calib_data->nvm_par_p7 * (pt_calib_data->t_lin * pt_calib_data->t_lin);
+    partial_data3 = pt_calib_data->nvm_par_p8
+                    * (pt_calib_data->t_lin * pt_calib_data->t_lin * pt_calib_data->t_lin);
+    partial_out1 = pt_calib_data->nvm_par_p5 + partial_data1 + partial_data2 + partial_data3;
 
     partial_data1 = pt_calib_data->nvm_par_p2 * pt_calib_data->t_lin;
-    partial_data2 =
-      pt_calib_data->nvm_par_p3 * (pt_calib_data->t_lin * pt_calib_data->t_lin);
-    partial_data3 =
-      pt_calib_data->nvm_par_p4
-      * (pt_calib_data->t_lin * pt_calib_data->t_lin * pt_calib_data->t_lin);
-    partial_out2 = raw_pres
-                   * (pt_calib_data->nvm_par_p1 + partial_data1 + partial_data2
-                      + partial_data3);
+    partial_data2 = pt_calib_data->nvm_par_p3 * (pt_calib_data->t_lin * pt_calib_data->t_lin);
+    partial_data3 = pt_calib_data->nvm_par_p4
+                    * (pt_calib_data->t_lin * pt_calib_data->t_lin * pt_calib_data->t_lin);
+    partial_out2 =
+      raw_pres * (pt_calib_data->nvm_par_p1 + partial_data1 + partial_data2 + partial_data3);
 
     partial_data1 = raw_pres * raw_pres;
-    partial_data2 = pt_calib_data->nvm_par_p9
-                    + pt_calib_data->nvm_par_p10 * pt_calib_data->t_lin;
+    partial_data2 = pt_calib_data->nvm_par_p9 + pt_calib_data->nvm_par_p10 * pt_calib_data->t_lin;
     partial_data3 = partial_data1 * partial_data2;
-    partial_data4 =
-      partial_data3
-      + (raw_pres * raw_pres * raw_pres) * pt_calib_data->nvm_par_p11;
+    partial_data4 = partial_data3 + (raw_pres * raw_pres * raw_pres) * pt_calib_data->nvm_par_p11;
 
     ppt_dev->data.pressure = partial_out1 + partial_out2 + partial_data4;
     if (ppt_dev->data.pressure < BMP388_MIN_PRES)
@@ -236,17 +210,14 @@ static void compensate_pressure(bmp388_dev_t* ppt_dev)
 static void compensate_temperature(bmp388_dev_t* ppt_dev)
 {
     driver_t*   pt_curr_driver = (driver_t*)ppt_dev;
-    meas_data_t uncomp_temp = (meas_data_t)pt_curr_driver->raw_data.temperature;
-    meas_data_t partial_data1 = (meas_data_t)0;
-    meas_data_t partial_data2 = (meas_data_t)0;
+    meas_data_t uncomp_temp    = (meas_data_t)pt_curr_driver->raw_data.temperature;
+    meas_data_t partial_data1  = (meas_data_t)0;
+    meas_data_t partial_data2  = (meas_data_t)0;
 
-    partial_data1 =
-      (meas_data_t)(uncomp_temp - pt_curr_driver->calib_data.nvm_par_t1);
-    partial_data2 =
-      (meas_data_t)(partial_data1 * pt_curr_driver->calib_data.nvm_par_t2);
+    partial_data1 = (meas_data_t)(uncomp_temp - pt_curr_driver->calib_data.nvm_par_t1);
+    partial_data2 = (meas_data_t)(partial_data1 * pt_curr_driver->calib_data.nvm_par_t2);
     pt_curr_driver->calib_data.t_lin =
-      partial_data2
-      + (partial_data1 * partial_data1) * pt_curr_driver->calib_data.nvm_par_t3;
+      partial_data2 + (partial_data1 * partial_data1) * pt_curr_driver->calib_data.nvm_par_t3;
 
     if (pt_curr_driver->calib_data.t_lin < BMP388_MIN_TEMP)
     {
@@ -276,10 +247,7 @@ static bool_t is_dev_ready(bmp388_dev_t* ppt_dev)
 {
     response_status_t ret_val = RET_OK;
 
-    ret_val = read_register(ppt_dev,
-                            &ppt_dev->chip_id,
-                            DEFAULT_IIC_REG_SZ,
-                            BMP388_REG_CHIP_ID);
+    ret_val = read_register(ppt_dev, &ppt_dev->chip_id, DEFAULT_IIC_REG_SZ, BMP388_REG_CHIP_ID);
 
     return ((ret_val == RET_OK) && (ppt_dev->chip_id == BMP388_CHIP_ID));
 }
@@ -292,15 +260,12 @@ static bool_t is_dev_ready(bmp388_dev_t* ppt_dev)
  * @param[out] ppt_pres_rdy Pointer to store the pressure readiness status.
  * @return Result of the execution status.
  */
-static response_status_t get_data_state(bmp388_dev_t* ppt_dev,
-                                        bool_t*       ppt_tmp_rdy,
-                                        bool_t*       ppt_pres_rdy)
+static response_status_t get_data_state(bmp388_dev_t* ppt_dev, bool_t* ppt_tmp_rdy,
+                                        bool_t* ppt_pres_rdy)
 {
     uint8_t           sens_status = 0U;
-    response_status_t api_ret_val = read_register(ppt_dev,
-                                                  &sens_status,
-                                                  DEFAULT_IIC_REG_SZ,
-                                                  BMP388_REG_SENS_STATUS);
+    response_status_t api_ret_val =
+      read_register(ppt_dev, &sens_status, DEFAULT_IIC_REG_SZ, BMP388_REG_SENS_STATUS);
     if (api_ret_val == RET_OK)
     {
         *ppt_tmp_rdy  = BMP3_GET_BITS(sens_status, BMP388_REG_SENS_STATUS_TEMP);
@@ -320,18 +285,13 @@ static bmp388_status_t read_sens_time(bmp388_dev_t* ppt_dev)
     bmp388_status_t   ret_val                                 = BMP388_NO_ERROR;
     uint8_t           time_reg_data[BMP388_REG_SENS_TIME_LEN] = { 0U };
 
-    api_ret_val = read_register(ppt_dev,
-                                time_reg_data,
-                                BMP388_REG_SENS_TIME_LEN,
-                                BMP388_REG_SENS_TIME);
+    api_ret_val =
+      read_register(ppt_dev, time_reg_data, BMP388_REG_SENS_TIME_LEN, BMP388_REG_SENS_TIME);
     if (api_ret_val == RET_OK)
     {
-        ret_val                  = BMP388_NO_ERROR;
-        ppt_dev->data.sensortime = BYTES_TO_DWORD(unsigned,
-                                                  time_reg_data[0U],
-                                                  time_reg_data[1U],
-                                                  time_reg_data[2U],
-                                                  0U);
+        ret_val = BMP388_NO_ERROR;
+        ppt_dev->data.sensortime =
+          BYTES_TO_DWORD(unsigned, time_reg_data[0U], time_reg_data[1U], time_reg_data[2U], 0U);
     }
     else
     {
@@ -347,11 +307,11 @@ static bmp388_status_t read_sens_time(bmp388_dev_t* ppt_dev)
  */
 static bmp388_status_t read_pressure(bmp388_dev_t* ppt_dev)
 {
-    response_status_t api_ret_val    = RET_OK;
-    bmp388_status_t   ret_val        = BMP388_NO_ERROR;
-    bool_t            temp_rdy       = FALSE;
-    bool_t            pres_rdy       = FALSE;
-    driver_t*         pt_curr_driver = (driver_t*)ppt_dev;
+    response_status_t api_ret_val                             = RET_OK;
+    bmp388_status_t   ret_val                                 = BMP388_NO_ERROR;
+    bool_t            temp_rdy                                = FALSE;
+    bool_t            pres_rdy                                = FALSE;
+    driver_t*         pt_curr_driver                          = (driver_t*)ppt_dev;
     uint8_t           pres_reg_data[BMP388_REG_DATA_PRES_LEN] = { 0U };
 
     api_ret_val = get_data_state(ppt_dev, &temp_rdy, &pres_rdy);
@@ -366,18 +326,12 @@ static bmp388_status_t read_pressure(bmp388_dev_t* ppt_dev)
     }
     else
     {
-        api_ret_val = read_register(ppt_dev,
-                                    pres_reg_data,
-                                    BMP388_REG_DATA_PRES_LEN,
-                                    BMP388_REG_DATA_PRES);
+        api_ret_val =
+          read_register(ppt_dev, pres_reg_data, BMP388_REG_DATA_PRES_LEN, BMP388_REG_DATA_PRES);
         if (api_ret_val == RET_OK)
         {
             pt_curr_driver->raw_data.pressure =
-              BYTES_TO_DWORD(unsigned,
-                             pres_reg_data[0U],
-                             pres_reg_data[1U],
-                             pres_reg_data[2U],
-                             0U);
+              BYTES_TO_DWORD(unsigned, pres_reg_data[0U], pres_reg_data[1U], pres_reg_data[2U], 0U);
             ppt_dev->data.pressure = 0U;
             compensate_pressure(ppt_dev);
             ret_val = BMP388_NO_ERROR;
@@ -418,18 +372,12 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
     }
     else
     {
-        api_ret_val = read_register(ppt_dev,
-                                    temp_reg_data,
-                                    BMP388_REG_DATA_TEMP_LEN,
-                                    BMP388_REG_DATA_TEMP);
+        api_ret_val =
+          read_register(ppt_dev, temp_reg_data, BMP388_REG_DATA_TEMP_LEN, BMP388_REG_DATA_TEMP);
         if (api_ret_val == RET_OK)
         {
             pt_curr_driver->raw_data.temperature =
-              BYTES_TO_DWORD(unsigned,
-                             temp_reg_data[0U],
-                             temp_reg_data[1U],
-                             temp_reg_data[2U],
-                             0U);
+              BYTES_TO_DWORD(unsigned, temp_reg_data[0U], temp_reg_data[1U], temp_reg_data[2U], 0U);
             ppt_dev->data.temperature = 0U;
             compensate_temperature(ppt_dev);
             ret_val = BMP388_NO_ERROR;
@@ -443,6 +391,36 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
     return ret_val;
 }
 
+static response_status_t send_cmd(bmp388_dev_t* ppt_dev, bmp388_cmds p_cmd, uint32_t p_timeout_ms)
+{
+    response_status_t ret_val       = RET_OK;
+    uint8_t           reg_val       = 0U;
+    bool_t            cmd_rdy       = FALSE;
+    uint32_t          max_retry_cnt = p_timeout_ms / 10U; // 10 ms intervals
+
+    while (max_retry_cnt > 0U)
+    {
+        ret_val = read_register(ppt_dev, &reg_val, DEFAULT_IIC_REG_SZ, BMP388_REG_SENS_STATUS);
+        if (ret_val == RET_OK)
+        {
+            cmd_rdy = BMP3_GET_BITS(reg_val, BMP388_REG_SENS_STATUS_CMD) == 0x01;
+            if (cmd_rdy == TRUE)
+            {
+                ret_val = write_register(ppt_dev, &p_cmd, DEFAULT_IIC_REG_SZ, BMP388_REG_CMD);
+                break;
+            }
+            else
+            {
+                ret_val = RET_TIMEOUT;
+            }
+        }
+        max_retry_cnt--;
+        ps_hard_delay_ms(10U); // Wait for 10 ms before retrying
+    }
+
+    return ret_val;
+}
+
 /**
  * @brief This function sets the OSR, ODR and IIR filter settings of the sensor
  * @param[in,out] ppt_dev BMP388 device instance.
@@ -451,37 +429,22 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_set_data_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     uint8_t           settings_data = 0U;
 
     settings_data =
-      BMP3_SET_BITS(BMP388_REG_OSR_PRES,
-                    ppt_dev->settings.data_settings.press_oversampling);
+      BMP3_SET_BITS(BMP388_REG_OSR_PRES, ppt_dev->settings.data_settings.press_oversampling);
     settings_data |=
-      BMP3_SET_BITS(BMP388_REG_OSR_TEMP,
-                    ppt_dev->settings.data_settings.temp_oversampling);
-    ret_val |= write_register(ppt_dev,
-                              &settings_data,
-                              DEFAULT_IIC_REG_SZ,
-                              BMP388_REG_OSR);
+      BMP3_SET_BITS(BMP388_REG_OSR_TEMP, ppt_dev->settings.data_settings.temp_oversampling);
+    ret_val |= write_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_OSR);
 
-    settings_data =
-      BMP3_SET_BITS(BMP388_REG_ODR,
-                    ppt_dev->settings.data_settings.output_data_rate);
-    ret_val |= write_register(ppt_dev,
-                              &settings_data,
-                              DEFAULT_IIC_REG_SZ,
-                              BMP388_REG_ODR);
+    settings_data = BMP3_SET_BITS(BMP388_REG_ODR, ppt_dev->settings.data_settings.output_data_rate);
+    ret_val      |= write_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_ODR);
 
-    settings_data = BMP3_SET_BITS(BMP388_REG_CONFIG,
-                                  ppt_dev->settings.data_settings.iir_filter);
-    ret_val      |= write_register(ppt_dev,
-                              &settings_data,
-                              DEFAULT_IIC_REG_SZ,
-                              BMP388_REG_CONFIG);
+    settings_data = BMP3_SET_BITS(BMP388_REG_CONFIG, ppt_dev->settings.data_settings.iir_filter);
+    ret_val      |= write_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_CONFIG);
 
     return ret_val;
 }
@@ -495,21 +458,16 @@ response_status_t dd_bmp388_set_data_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_set_dev_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     uint8_t           settings_data = 0U;
 
-    settings_data = BMP3_SET_BITS(BMP388_REG_PWR_CTRL_MODE,
-                                  ppt_dev->settings.dev_settings.power_mode);
+    settings_data =
+      BMP3_SET_BITS(BMP388_REG_PWR_CTRL_MODE, ppt_dev->settings.dev_settings.power_mode);
     settings_data |=
-      BMP3_SET_BITS(BMP388_REG_PWR_CTRL_EN,
-                    ppt_dev->settings.dev_settings.sensor_enable);
-    ret_val = write_register(ppt_dev,
-                             &settings_data,
-                             DEFAULT_IIC_REG_SZ,
-                             BMP388_REG_PWR_CTRL);
+      BMP3_SET_BITS(BMP388_REG_PWR_CTRL_EN, ppt_dev->settings.dev_settings.sensor_enable);
+    ret_val = write_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_PWR_CTRL);
 
     return ret_val;
 }
@@ -523,20 +481,16 @@ response_status_t dd_bmp388_set_dev_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_set_ifc_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     uint8_t           settings_data = 0U;
 
-    settings_data  = BMP3_SET_BITS(BMP388_REG_IF_CONF_SPI,
-                                  ppt_dev->settings.comm_ifc_settings.spi_mode);
-    settings_data |= BMP3_SET_BITS(BMP388_REG_IF_CONF_WDT,
-                                   ppt_dev->settings.comm_ifc_settings.iic_wdt);
-    ret_val        = write_register(ppt_dev,
-                             &settings_data,
-                             DEFAULT_IIC_REG_SZ,
-                             BMP388_REG_IF_CONF);
+    settings_data =
+      BMP3_SET_BITS(BMP388_REG_IF_CONF_SPI, ppt_dev->settings.comm_ifc_settings.spi_mode);
+    settings_data |=
+      BMP3_SET_BITS(BMP388_REG_IF_CONF_WDT, ppt_dev->settings.comm_ifc_settings.iic_wdt);
+    ret_val = write_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_IF_CONF);
 
     return ret_val;
 }
@@ -549,20 +503,16 @@ response_status_t dd_bmp388_set_ifc_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_set_interrupt_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     uint8_t           settings_data = 0U;
 
-    settings_data  = BMP3_SET_BITS(BMP388_REG_INT_CTRL_EN,
-                                  ppt_dev->settings.int_settings.int_enable);
-    settings_data |= BMP3_SET_BITS(BMP388_REG_INT_CTRL_TYPE,
-                                   ppt_dev->settings.int_settings.int_type);
-    ret_val        = write_register(ppt_dev,
-                             &settings_data,
-                             DEFAULT_IIC_REG_SZ,
-                             BMP388_REG_INT_CTRL);
+    settings_data =
+      BMP3_SET_BITS(BMP388_REG_INT_CTRL_EN, ppt_dev->settings.int_settings.int_enable);
+    settings_data |=
+      BMP3_SET_BITS(BMP388_REG_INT_CTRL_TYPE, ppt_dev->settings.int_settings.int_type);
+    ret_val = write_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_INT_CTRL);
 
     return ret_val;
 }
@@ -575,24 +525,14 @@ response_status_t dd_bmp388_set_interrupt_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_get_data_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val           = RET_OK;
     uint8_t           settings_data[3U] = { 0U };
 
-    ret_val |= read_register(ppt_dev,
-                             &settings_data[0U],
-                             DEFAULT_IIC_REG_SZ,
-                             BMP388_REG_OSR);
-    ret_val |= read_register(ppt_dev,
-                             &settings_data[1U],
-                             DEFAULT_IIC_REG_SZ,
-                             BMP388_REG_ODR);
-    ret_val |= read_register(ppt_dev,
-                             &settings_data[2U],
-                             DEFAULT_IIC_REG_SZ,
-                             BMP388_REG_CONFIG);
+    ret_val |= read_register(ppt_dev, &settings_data[0U], DEFAULT_IIC_REG_SZ, BMP388_REG_OSR);
+    ret_val |= read_register(ppt_dev, &settings_data[1U], DEFAULT_IIC_REG_SZ, BMP388_REG_ODR);
+    ret_val |= read_register(ppt_dev, &settings_data[2U], DEFAULT_IIC_REG_SZ, BMP388_REG_CONFIG);
 
     if (ret_val == RET_OK)
     {
@@ -618,16 +558,12 @@ response_status_t dd_bmp388_get_data_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_get_dev_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     uint8_t           settings_data = 0U;
 
-    ret_val = read_register(ppt_dev,
-                            &settings_data,
-                            DEFAULT_IIC_REG_SZ,
-                            BMP388_REG_PWR_CTRL);
+    ret_val = read_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_PWR_CTRL);
 
     if (ret_val == RET_OK)
     {
@@ -649,17 +585,13 @@ response_status_t dd_bmp388_get_dev_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_get_ifc_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
     uint8_t settings_data = 0U;
 
-    ret_val = read_register(ppt_dev,
-                            &settings_data,
-                            DEFAULT_IIC_REG_SZ,
-                            BMP388_REG_IF_CONF);
+    ret_val = read_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_IF_CONF);
 
     if (ret_val == RET_OK)
     {
@@ -680,16 +612,12 @@ response_status_t dd_bmp388_get_ifc_settings(bmp388_dev_t* ppt_dev)
 response_status_t dd_bmp388_get_interrupt_settings(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     uint8_t           settings_data = 0U;
 
-    ret_val = read_register(ppt_dev,
-                            &settings_data,
-                            DEFAULT_IIC_REG_SZ,
-                            BMP388_REG_INT_CTRL);
+    ret_val = read_register(ppt_dev, &settings_data, DEFAULT_IIC_REG_SZ, BMP388_REG_INT_CTRL);
 
     if (ret_val == RET_OK)
     {
@@ -714,42 +642,60 @@ response_status_t dd_bmp388_get_interrupt_settings(bmp388_dev_t* ppt_dev)
  * @retval `BMP388_WAITING_PRESS` if pressure data is not ready.
  * @retval `BMP388_WAITING_TEMP` if temperature data is not ready.
  */
-bmp388_status_t dd_bmp388_get_data(bmp388_dev_t*         ppt_dev,
-                                   bmp388_data_request_t p_data_req)
+bmp388_status_t dd_bmp388_get_data(bmp388_dev_t* ppt_dev, bmp388_data_request_t p_data_req)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, BMP388_ERROR_API);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      BMP388_ERROR_API);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, BMP388_ERROR_API);
 
-    bmp388_status_t ret_val = BMP388_NO_ERROR;
+    bmp388_status_t   ret_val     = BMP388_NO_ERROR;
+    response_status_t api_ret_val = RET_OK;
+    uint8_t           reg_val     = 0x00;
+    bool_t            data_rdy    = FALSE;
 
-    if (p_data_req & BMP388_READ_TIME)
+    api_ret_val = read_register(ppt_dev, &reg_val, DEFAULT_IIC_REG_SZ, BMP388_REG_INT_STATUS);
+
+    if (api_ret_val == RET_OK)
     {
-        ret_val = read_sens_time(ppt_dev);
-    }
+        data_rdy = BMP3_GET_BITS(reg_val, BMP388_REG_INT_STATUS_DRDY) == 0x01;
 
-    /**
-     * @note If any of the pressure or temperature data is requested,
-     * we need to read temperature for compensation and then if
-     * pressure is requested, we read pressure data.
-     * If only temperature is requested, we don't read pressure data.
-     */
-    if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESS_TEMP))
+        if (data_rdy == TRUE)
+        {
+            if (p_data_req & BMP388_READ_TIME)
+            {
+                ret_val = read_sens_time(ppt_dev);
+            }
+
+            /**
+             * @note If any of the pressure or temperature data is requested,
+             * we need to read temperature for compensation and then if
+             * pressure is requested, we read pressure data.
+             * If only temperature is requested, we don't read pressure data.
+             */
+            if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESS_TEMP))
+            {
+                ret_val = read_temp(ppt_dev);
+            }
+
+            if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESSURE))
+            {
+                ret_val = read_pressure(ppt_dev);
+            }
+
+            /// if temperature data is not requested, we set it to 0
+            if (!(p_data_req & BMP388_READ_TEMP))
+            {
+                ppt_dev->data.temperature = 0U;
+            }
+        }
+        else
+        {
+            ret_val = BMP388_WAITING_DATA;
+        }
+    }
+    else
     {
-        ret_val = read_temp(ppt_dev);
+        ret_val = BMP388_ERROR_API;
     }
-
-    if ((ret_val == BMP388_NO_ERROR) && (p_data_req & BMP388_READ_PRESSURE))
-    {
-        ret_val = read_pressure(ppt_dev);
-    }
-
-    /// if temperature data is not requested, we set it to 0
-    if (!(p_data_req & BMP388_READ_TEMP))
-    {
-        ppt_dev->data.temperature = 0U;
-    }
-
     return ret_val;
 }
 
@@ -761,15 +707,13 @@ bmp388_status_t dd_bmp388_get_data(bmp388_dev_t*         ppt_dev,
 bmp388_status_t dd_bmp388_get_error_state(bmp388_dev_t* ppt_dev)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, BMP388_ERROR_API);
-    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE,
-                      BMP388_ERROR_API);
+    ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, BMP388_ERROR_API);
 
     response_status_t api_ret_val = RET_OK;
     bmp388_status_t   ret_val     = BMP388_NO_ERROR;
     uint8_t           reg_data    = 0x00;
 
-    api_ret_val =
-      read_register(ppt_dev, &reg_data, DEFAULT_IIC_REG_SZ, BMP388_REG_ERR);
+    api_ret_val = read_register(ppt_dev, &reg_data, DEFAULT_IIC_REG_SZ, BMP388_REG_ERR);
 
     if (api_ret_val != RET_OK)
     {
@@ -777,9 +721,41 @@ bmp388_status_t dd_bmp388_get_error_state(bmp388_dev_t* ppt_dev)
     }
     else
     {
-        ret_val = (reg_data & BMP388_ERROR_CMD)
-                  | (reg_data & BMP388_ERROR_FATAL)
+        ret_val = (reg_data & BMP388_ERROR_CMD) | (reg_data & BMP388_ERROR_FATAL)
                   | (reg_data & BMP388_ERROR_CONFIG);
+    }
+
+    return ret_val;
+}
+
+bmp388_status_t dd_bmp388_reset(bmp388_dev_t* ppt_dev)
+{
+    ASSERT_AND_RETURN(ppt_dev == NULL, BMP388_ERROR_API);
+    response_status_t api_ret_val = RET_OK;
+    bmp388_status_t   ret_val     = BMP388_NO_ERROR;
+    uint8_t           reg_val     = 0x00;
+    api_ret_val                   = send_cmd(ppt_dev, BMP388_CMD_SOFT_RESET, 100U);
+    if (api_ret_val == RET_OK)
+    {
+        ps_hard_delay_ms(25U); // Wait for 25 ms after reset
+        api_ret_val = read_register(ppt_dev, &reg_val, DEFAULT_IIC_REG_SZ, BMP388_REG_EVENT);
+        ret_val     = dd_bmp388_get_error_state(ppt_dev);
+    }
+
+    if (api_ret_val == RET_OK)
+    {
+        if (reg_val == 0x01 && ret_val == BMP388_NO_ERROR)
+        {
+            ret_val = BMP388_NO_ERROR;
+        }
+        else
+        {
+            // Do Nothing. Return ret_val value
+        }
+    }
+    else
+    {
+        ret_val = BMP388_ERROR_API;
     }
 
     return ret_val;
@@ -805,8 +781,7 @@ bmp388_dev_t* dd_bmp388_get_dev(bmp388_devices_t p_dev_id)
  * @param[in] p_dev_id Device ID of the BMP388 device to initialize.
  * @return Result of the execution status.
  */
-response_status_t dd_bmp388_init(bmp388_dev_t**   ppt_dev,
-                                 bmp388_devices_t p_dev_id)
+response_status_t dd_bmp388_init(bmp388_dev_t** ppt_dev, bmp388_devices_t p_dev_id)
 {
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
 
@@ -823,11 +798,11 @@ response_status_t dd_bmp388_init(bmp388_dev_t**   ppt_dev,
         if (is_dev_ready(&(pt_curr_driver->dev)))
         {
             pt_curr_driver->is_initialized = TRUE;
-            ret_val  = read_calib_data(&pt_curr_driver->dev);
-            ret_val |= dd_bmp388_get_data_settings(&pt_curr_driver->dev);
-            ret_val |= dd_bmp388_get_dev_settings(&pt_curr_driver->dev);
-            ret_val |= dd_bmp388_get_ifc_settings(&pt_curr_driver->dev);
-            ret_val |= dd_bmp388_get_interrupt_settings(&pt_curr_driver->dev);
+            ret_val                        = read_calib_data(&pt_curr_driver->dev);
+            ret_val                       |= dd_bmp388_get_data_settings(&pt_curr_driver->dev);
+            ret_val                       |= dd_bmp388_get_dev_settings(&pt_curr_driver->dev);
+            ret_val                       |= dd_bmp388_get_ifc_settings(&pt_curr_driver->dev);
+            ret_val                       |= dd_bmp388_get_interrupt_settings(&pt_curr_driver->dev);
         }
         else
         {
