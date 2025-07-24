@@ -66,8 +66,7 @@ void string_reverse(char* ppt_str, uint32_t p_str_len)
  * @param[in] p_base The base for conversion.
  * @return The length of the resulting string.
  */
-uint32_t string_itoa(int32_t p_num, char* ppt_str, uint32_t p_digit,
-                     number_base_t p_base)
+uint32_t string_itoa(int32_t p_num, char* ppt_str, uint32_t p_digit, number_base_t p_base)
 {
     ASSERT_AND_RETURN(ppt_str == NULL, 0U);
 
@@ -107,8 +106,7 @@ uint32_t string_itoa(int32_t p_num, char* ppt_str, uint32_t p_digit,
         while (num_pos != 0)
         {
             remainder    = num_pos % p_base;
-            ppt_str[idx] = (remainder > 9) ? (remainder - 10) + 'a'
-                                           : remainder + '0'; // NOLINT
+            ppt_str[idx] = (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0'; // NOLINT
             idx++;
             num_pos = num_pos / p_base;
         }

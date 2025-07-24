@@ -26,8 +26,7 @@ typedef enum en_number_base
  ***************************************************************************************************/
 
 void     string_reverse(char* ppt_str, uint32_t p_str_len);
-uint32_t string_itoa(int32_t p_num, char* ppt_str, uint32_t p_digit,
-                     number_base_t p_base);
+uint32_t string_itoa(int32_t p_num, char* ppt_str, uint32_t p_digit, number_base_t p_base);
 uint32_t string_ftoa(float p_fnum, char* ppt_str, uint32_t p_after_point);
 
 #endif /* SU_STRING_H */
