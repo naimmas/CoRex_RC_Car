@@ -214,16 +214,14 @@ typedef enum en_qmi86_dev_id
 response_status_t dd_qmi86_set_data_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_set_interface_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_set_interrupt_settings(qmi86_dev_t* ppt_dev);
-response_status_t dd_qmi86_set_device_mode(qmi86_dev_t*      ppt_dev,
-                                           qmi86_sensor_mode p_dev_mode);
+response_status_t dd_qmi86_set_device_mode(qmi86_dev_t* ppt_dev, qmi86_sensor_mode p_dev_mode);
 response_status_t dd_qmi86_get_data_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_get_interface_settings(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_get_interrupt_settings(qmi86_dev_t* ppt_dev);
 qmi86_sensor_mode dd_qmi86_get_device_mode(qmi86_dev_t* ppt_dev);
-response_status_t dd_qmi86_calibrate_gyro(
-  qmi86_dev_t* ppt_dev, union gyro_calib_result* p_result_hndlr);
-qmi86_st_result   dd_qmi86_perform_self_test(qmi86_dev_t*    ppt_dev,
-                                             qmi86_sensors_t p_sensor_type);
+response_status_t dd_qmi86_calibrate_gyro(qmi86_dev_t*             ppt_dev,
+                                          union gyro_calib_result* p_result_hndlr);
+qmi86_st_result   dd_qmi86_perform_self_test(qmi86_dev_t* ppt_dev, qmi86_sensors_t p_sensor_type);
 response_status_t dd_qmi86_reset_device(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_poll_data(qmi86_dev_t* ppt_dev);
 response_status_t dd_qmi86_init(qmi86_dev_t** ppt_dev, qmi86_dev_id_t p_dev_id);
