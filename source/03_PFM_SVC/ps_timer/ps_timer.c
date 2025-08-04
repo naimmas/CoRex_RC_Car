@@ -6,3 +6,8 @@ void ps_hard_delay_ms(uint32_t p_delay_ms)
 {
     ha_timer_hard_delay_ms(p_delay_ms);
 }
+
+uint32_t ps_get_cpu_ms()
+{
+    return ha_timer_get_tick();
+}

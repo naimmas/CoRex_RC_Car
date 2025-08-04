@@ -3,6 +3,7 @@
 
 #include "su_common.h"
 
-void ps_hard_delay_ms(uint32_t p_delay_ms);
+void     ps_hard_delay_ms(uint32_t p_delay_ms);
+uint32_t ps_get_cpu_ms();
 
 #endif // PS_TIMER_H
