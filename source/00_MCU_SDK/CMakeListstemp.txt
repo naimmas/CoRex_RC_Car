@@ -1,5 +1,0 @@
-add_library(MCU_HAL STATIC)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC MCU_HAL)
-
-target_link_libraries(MCU_HAL PRIVATE SW_UTILS)

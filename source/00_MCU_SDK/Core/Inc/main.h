@@ -59,6 +59,22 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_Pin GPIO_PIN_13
 #define LED_GPIO_Port GPIOC
+#define GPS_TX_Pin GPIO_PIN_2
+#define GPS_TX_GPIO_Port GPIOA
+#define GPS_RX_Pin GPIO_PIN_3
+#define GPS_RX_GPIO_Port GPIOA
+#define DBG_TX_Pin GPIO_PIN_9
+#define DBG_TX_GPIO_Port GPIOA
+#define DBG_RX_Pin GPIO_PIN_10
+#define DBG_RX_GPIO_Port GPIOA
+#define ESP_TX_Pin GPIO_PIN_11
+#define ESP_TX_GPIO_Port GPIOA
+#define ESP_RX_Pin GPIO_PIN_12
+#define ESP_RX_GPIO_Port GPIOA
+#define RC_CH1_Pin GPIO_PIN_4
+#define RC_CH1_GPIO_Port GPIOB
+#define RC_CH2_Pin GPIO_PIN_6
+#define RC_CH2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 size_t get_uart_ifcs(UART_HandleTypeDef* const * * const uart_ifcs_buffer);
