@@ -313,9 +313,10 @@ static bmp388_status_t read_pressure(bmp388_dev_t* ppt_dev)
     bool_t            pres_rdy                                = FALSE;
     driver_t*         pt_curr_driver                          = (driver_t*)ppt_dev;
     uint8_t           pres_reg_data[BMP388_REG_DATA_PRES_LEN] = { 0U };
-    //If the interrupt is enabled and thie function is called
-    //we assume that the data is ready
-    if (ppt_dev->settings.int_settings.int_enable & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    // If the interrupt is enabled and thie function is called
+    // we assume that the data is ready
+    if (ppt_dev->settings.int_settings.int_enable
+        & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
     {
         pres_rdy = TRUE;
     }
@@ -367,10 +368,11 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
     driver_t*         pt_curr_driver = (driver_t*)ppt_dev;
 
     uint8_t temp_reg_data[BMP388_REG_DATA_TEMP_LEN] = { 0U };
-    
-    //If the interrupt is enabled and thie function is called
-    //we assume that the data is ready
-    if (ppt_dev->settings.int_settings.int_enable & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+
+    // If the interrupt is enabled and thie function is called
+    // we assume that the data is ready
+    if (ppt_dev->settings.int_settings.int_enable
+        & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
     {
         pres_rdy = TRUE;
     }
@@ -685,7 +687,8 @@ bmp388_status_t dd_bmp388_get_data(bmp388_dev_t* ppt_dev, bmp388_data_request_t 
     uint8_t           reg_val     = 0x00;
     bool_t            data_rdy    = FALSE;
 
-    if (ppt_dev->settings.int_settings.int_enable & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    if (ppt_dev->settings.int_settings.int_enable
+        & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
     {
         data_rdy = is_data_rdy(ppt_dev);
     }

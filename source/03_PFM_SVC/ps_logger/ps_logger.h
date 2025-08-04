@@ -14,7 +14,7 @@
 #define LOGGER_CHNL_DEBUG 2
 
 #define LOGGER_ENABLED 1
-#define LOGGER_OUTPUT_CHANNEL LOGGER_CHNL_DEBUG
+#define LOGGER_OUTPUT_CHANNEL LOGGER_CHNL_UART
 
 #define MAX_DBG_MSG_LEN 512
 
@@ -110,8 +110,8 @@ typedef enum en_debug_level
 void ps_logger_init(void);
 void ps_logger_set_threshold(debug_level_t p_lvl);
 
-void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name,
-                    const char* ppt_msg, float p_param_1, float p_param_2,
-                    float p_param_3);
+void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name, const char* ppt_msg,
+                    float p_param_1, float p_param_2, float p_param_3);
+void ps_logger_send_raw(uint8_t* ppt_msg, uint16_t p_len);
 
 #endif /* PS_LOGGER_H */

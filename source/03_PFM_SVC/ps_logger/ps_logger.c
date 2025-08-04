@@ -74,9 +74,7 @@ static uint16_t get_param_qualifier(const char* ppt_msg)
     if (ppt_msg[0] == '%')
     {
         /// Iterate through the message to find the first valid qualifier
-        for (uint8_t i = 1;
-             ((ppt_msg[i] != '\0' && msg_len == 0) && ppt_msg[i] != ' ');
-             i++)
+        for (uint8_t i = 1; ((ppt_msg[i] != '\0' && msg_len == 0) && ppt_msg[i] != ' '); i++)
         {
             if (ppt_msg[i] == qualifiers[0] || ppt_msg[i] == qualifiers[1]
                 || ppt_msg[i] == qualifiers[2])
@@ -141,24 +139,21 @@ static void process_message(const char* ppt_msg, uint16_t* ppt_bytes_written,
                 switch (ppt_msg[i + qualifier_idx])
                 {
                     case 'f':
-                        qualifier_idx =
-                          string_ftoa(current_param,
-                                      &g_debug_msg[*ppt_bytes_written],
-                                      FLOAT_NUMBER_PRECISION);
+                        qualifier_idx = string_ftoa(current_param,
+                                                    &g_debug_msg[*ppt_bytes_written],
+                                                    FLOAT_NUMBER_PRECISION);
                         break;
                     case 'd':
-                        qualifier_idx =
-                          string_itoa((int32_t)current_param,
-                                      &g_debug_msg[*ppt_bytes_written],
-                                      0,
-                                      NUMBER_BASE_DECIMAL);
+                        qualifier_idx = string_itoa((int32_t)current_param,
+                                                    &g_debug_msg[*ppt_bytes_written],
+                                                    0,
+                                                    NUMBER_BASE_DECIMAL);
                         break;
                     case 'x':
-                        qualifier_idx =
-                          string_itoa((int32_t)current_param,
-                                      &g_debug_msg[*ppt_bytes_written],
-                                      0,
-                                      NUMBER_BASE_HEX);
+                        qualifier_idx = string_itoa((int32_t)current_param,
+                                                    &g_debug_msg[*ppt_bytes_written],
+                                                    0,
+                                                    NUMBER_BASE_HEX);
                         break;
                     default:
                         qualifier_idx = 0U; // Unknown qualifier, do not write
@@ -193,27 +188,20 @@ static void process_message(const char* ppt_msg, uint16_t* ppt_bytes_written,
  * @param ppt_bytes_written Pointer to the variable that will hold the number of
  * bytes written to `g_debug_msg`.
  */
-static void add_log_prefix(uint8_t p_lvl, const char* ppt_func_name,
-                           uint16_t* ppt_bytes_written)
+static void add_log_prefix(uint8_t p_lvl, const char* ppt_func_name, uint16_t* ppt_bytes_written)
 {
-    const char* log_strings[] = { "",
-                                  DBG_LOG_COLOR_E,
-                                  DBG_LOG_COLOR_W,
-                                  DBG_LOG_COLOR_I,
-                                  DBG_LOG_COLOR_P,
-                                  DBG_LOG_COLOR_D };
+    const char* log_strings[] = {
+        "", DBG_LOG_COLOR_E, DBG_LOG_COLOR_W, DBG_LOG_COLOR_I, DBG_LOG_COLOR_P, DBG_LOG_COLOR_D
+    };
 
     /// Copy the log level prefix to the debug message
-    strlcpy(&g_debug_msg[*ppt_bytes_written],
-            log_strings[p_lvl],
-            MAX_DBG_MSG_LEN);
+    strlcpy(&g_debug_msg[*ppt_bytes_written], log_strings[p_lvl], MAX_DBG_MSG_LEN);
 
     *ppt_bytes_written = strlen(log_strings[p_lvl]);
 
     if (ppt_func_name != NULL)
     {
-        *ppt_bytes_written +=
-          add_function_name(ppt_func_name, &g_debug_msg[*ppt_bytes_written]);
+        *ppt_bytes_written += add_function_name(ppt_func_name, &g_debug_msg[*ppt_bytes_written]);
     }
 }
 
@@ -251,7 +239,10 @@ void ps_logger_set_threshold(debug_level_t p_lvl)
         g_debug_thld = p_lvl;
     }
 }
-
+void ps_logger_send_raw(uint8_t* ppt_msg, uint16_t p_len)
+{
+    ha_uart_transmit(LOGGER_UART_PORT, ppt_msg, p_len, DEFAUL_UART_SEND_TIMEOUT);
+}
 /**
  * @brief This function prints the log message with the specified log level.
  * Supported qualifiers are %d, %f and %x . If the format contains no
@@ -268,14 +259,11 @@ void ps_logger_set_threshold(debug_level_t p_lvl)
  * @param[in] p_param_3     if format contains %d, %f or %x the value of the
  * third parameter. 0 otherwise
  */
-void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name,
-                    const char* ppt_msg, float p_param_1, float p_param_2,
-                    float p_param_3)
+void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name, const char* ppt_msg,
+                    float p_param_1, float p_param_2, float p_param_3)
 {
     uint16_t    bytes_written                      = 0U;
-    const float p_params_list[MAX_PARAMETER_COUNT] = { p_param_1,
-                                                       p_param_2,
-                                                       p_param_3 };
+    const float p_params_list[MAX_PARAMETER_COUNT] = { p_param_1, p_param_2, p_param_3 };
 
     /// Filter the log level based on the threshold
     if (p_lvl <= g_debug_thld)
