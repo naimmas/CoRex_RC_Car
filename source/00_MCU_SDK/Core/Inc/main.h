@@ -77,9 +77,11 @@ void Error_Handler(void);
 #define RC_CH2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+
 size_t get_uart_ifcs(UART_HandleTypeDef* const * * const uart_ifcs_buffer);
 size_t get_gpio_pins(GPIO_TypeDef* const ** const port, uint16_t const ** pin);
 size_t get_iic_ifcs(I2C_HandleTypeDef* const ** const iic_ifcs_buffer);
+void get_base_tim_ifc(TIM_HandleTypeDef * *hw_inst);
 
 /* USER CODE END Private defines */
 
