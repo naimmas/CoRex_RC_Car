@@ -3,7 +3,7 @@
 
 #include "dd_bmp388_defs.h"
 #include "ha_iic/ha_iic.h"
-#include "ps_timer/ps_timer.h"
+#include "ps_app_timer/ps_app_timer.h"
 #include "string.h"
 #include "su_common.h"
 
@@ -315,8 +315,8 @@ static bmp388_status_t read_pressure(bmp388_dev_t* ppt_dev)
     uint8_t           pres_reg_data[BMP388_REG_DATA_PRES_LEN] = { 0U };
     // If the interrupt is enabled and thie function is called
     // we assume that the data is ready
-    if (ppt_dev->settings.int_settings.int_enable
-        & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    if (((ppt_dev->settings.int_settings.int_enable) & (BMP388_INT_ENABLE_DRDY))
+        == (BMP388_INT_ENABLE_DRDY))
     {
         pres_rdy = TRUE;
     }
@@ -371,8 +371,8 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
 
     // If the interrupt is enabled and thie function is called
     // we assume that the data is ready
-    if (ppt_dev->settings.int_settings.int_enable
-        & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    if (((ppt_dev->settings.int_settings.int_enable) & (BMP388_INT_ENABLE_DRDY))
+        == (BMP388_INT_ENABLE_DRDY))
     {
         pres_rdy = TRUE;
     }
@@ -682,13 +682,11 @@ bmp388_status_t dd_bmp388_get_data(bmp388_dev_t* ppt_dev, bmp388_data_request_t 
     ASSERT_AND_RETURN(ppt_dev == NULL, BMP388_ERROR_API);
     ASSERT_AND_RETURN(((driver_t*)(ppt_dev))->is_initialized == FALSE, BMP388_ERROR_API);
 
-    bmp388_status_t   ret_val     = BMP388_NO_ERROR;
-    response_status_t api_ret_val = RET_OK;
-    uint8_t           reg_val     = 0x00;
-    bool_t            data_rdy    = FALSE;
+    bmp388_status_t ret_val  = BMP388_NO_ERROR;
+    bool_t          data_rdy = FALSE;
 
-    if (ppt_dev->settings.int_settings.int_enable
-        & BMP388_INT_ENABLE_DRDY == BMP388_INT_ENABLE_DRDY)
+    if (((ppt_dev->settings.int_settings.int_enable) & (BMP388_INT_ENABLE_DRDY))
+        == (BMP388_INT_ENABLE_DRDY))
     {
         data_rdy = is_data_rdy(ppt_dev);
     }

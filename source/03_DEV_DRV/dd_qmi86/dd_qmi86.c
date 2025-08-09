@@ -3,7 +3,7 @@
 
 #include "dd_qmi86_defs.h"
 #include "ha_iic/ha_iic.h"
-#include "ha_timer/ha_timer.h"
+#include "ps_app_timer/ps_app_timer.h"
 #include "stdlib.h"
 #include "string.h"
 
@@ -128,7 +128,7 @@ static response_status_t wait_for_statusint_bit(qmi86_dev_t* ppt_dev, uint8_t p_
             break;
         }
 
-        ha_timer_hard_delay_ms(delay_per_try_ms);
+        ps_hard_delay_ms(delay_per_try_ms);
     }
 
     return ret_val;
@@ -149,7 +149,7 @@ static response_status_t exec_ctrl9_cmd(qmi86_dev_t* ppt_dev, ctrl9_cmds_t p_cmd
     // based on the command value
     if (ret_val == RET_OK)
     {
-        ha_timer_hard_delay_ms(p_cmd_time_ms);
+        ps_hard_delay_ms(p_cmd_time_ms);
         ret_val = wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_CMD_DONE_POS);
     }
 
@@ -276,7 +276,7 @@ static qmi86_st_result self_test_gyro(qmi86_dev_t* ppt_dev)
     if (api_ret_val == RET_OK)
     {
         reg_data = 0x00;
-        ha_timer_hard_delay_ms(st_total_time_ms);
+        ps_hard_delay_ms(st_total_time_ms);
         api_ret_val = wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
@@ -291,7 +291,7 @@ static qmi86_st_result self_test_gyro(qmi86_dev_t* ppt_dev)
     // to 0.
     if (api_ret_val == RET_OK)
     {
-        ha_timer_hard_delay_ms(st_total_time_ms);
+        ps_hard_delay_ms(st_total_time_ms);
         api_ret_val = wait_for_statusint_bit(ppt_dev, 0x00, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
@@ -378,7 +378,7 @@ static qmi86_st_result self_test_accel(qmi86_dev_t* ppt_dev)
     if (api_ret_val == RET_OK)
     {
         reg_data = 0x00;
-        ha_timer_hard_delay_ms(st_total_time_ms);
+        ps_hard_delay_ms(st_total_time_ms);
         api_ret_val = wait_for_statusint_bit(ppt_dev, 0x01, QMI86_REG_STATUSINT_AVAIL_POS);
     }
 
@@ -629,7 +629,7 @@ static response_status_t enable_sensor(qmi86_dev_t* ppt_dev, qmi86_sensor_mode p
         ret_val |= write_register(ppt_dev, &ctrl7_reg_data, 1, QMI86_REG_CTRL7);
 
         // Wait for process
-        ha_timer_hard_delay_ms(sys_delays[p_sensor_type]);
+        ps_hard_delay_ms(sys_delays[p_sensor_type]);
     }
     else
     {
@@ -759,7 +759,7 @@ response_status_t dd_qmi86_reset_device(qmi86_dev_t* ppt_dev)
     if (ret_val == RET_OK)
     {
         // Wait until device reset
-        ha_timer_hard_delay_ms(QMI86_SYS_POWER_ON_TIME);
+        ps_hard_delay_ms(QMI86_SYS_POWER_ON_TIME);
         reg_data = 0x00;
         ret_val  = read_register(ppt_dev, &reg_data, 1, QMI86_REG_RESET_RESULT);
         reset_ok = (reg_data == QMI86_RESET_SUCCESSFUL);
