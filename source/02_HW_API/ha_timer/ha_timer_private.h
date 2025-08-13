@@ -69,6 +69,8 @@ struct st_timer_driver_ifc
      * @retval `RET_OK` if the callback is registered successfully, else error code.
      */
     response_status_t (*register_callback)(uint8_t, void (*callback)(void));
+
+    void (*hard_delay)(uint32_t);
 };
 
 #endif /* HA_TIMER_PRIVATE_H */

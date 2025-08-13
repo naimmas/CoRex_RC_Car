@@ -82,3 +82,9 @@ response_status_t ha_timer_register_callback(gp_timers_t p_timer, void (*callbac
 
     return ret_val;
 }
+
+void ha_timer_hard_delay_ms(uint32_t p_delay_ms)
+{
+    ASSERT_AND_RETURN(g_driver_initialized != TRUE,);
+    g_pt_driver->api->hard_delay(p_delay_ms);
+}
