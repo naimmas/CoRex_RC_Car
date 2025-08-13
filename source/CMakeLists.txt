@@ -11,6 +11,8 @@ set(MCU_LAYER_DIR ${CMAKE_SOURCE_DIR}/00_MCU_SDK)
 
 set(CMAKE_TOOLCHAIN_FILE "${MCU_LAYER_DIR}/toolchain.cmake" CACHE FILEPATH "")
 
+link_libraries(m) # Add math library globally
+
 project(firmware C CXX ASM)
 
 set(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES})
