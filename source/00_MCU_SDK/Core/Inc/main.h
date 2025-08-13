@@ -54,6 +54,12 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+struct hal_capture_tim_ifc
+{
+  TIM_HandleTypeDef* const base_timer;
+  uint32_t engaged_channels;
+};
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -71,10 +77,6 @@ void Error_Handler(void);
 #define ESP_TX_GPIO_Port GPIOA
 #define ESP_RX_Pin GPIO_PIN_12
 #define ESP_RX_GPIO_Port GPIOA
-#define RC_CH1_Pin GPIO_PIN_4
-#define RC_CH1_GPIO_Port GPIOB
-#define RC_CH2_Pin GPIO_PIN_6
-#define RC_CH2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
@@ -82,6 +84,7 @@ size_t get_uart_ifcs(UART_HandleTypeDef* const * * const uart_ifcs_buffer);
 size_t get_gpio_pins(GPIO_TypeDef* const ** const port, uint16_t const ** pin);
 size_t get_iic_ifcs(I2C_HandleTypeDef* const ** const iic_ifcs_buffer);
 void get_base_tim_ifc(TIM_HandleTypeDef * *hw_inst);
+size_t get_ic_tim_ifcs(struct hal_capture_tim_ifc ** hw_tim_ifcs);
 
 /* USER CODE END Private defines */
 

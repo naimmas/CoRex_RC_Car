@@ -128,6 +128,33 @@ void get_base_tim_ifc(TIM_HandleTypeDef * *hw_inst)
 
 }
 
+/**
+ * @brief 
+ * @note No support for TIM1
+ * @note in one timer don't use the cannels shared with same hardware counter
+ * for example TIM3_CH1 and TIM3_CH2 can't be used for input capture at the same time
+ */
+static struct hal_capture_tim_ifc l_tim_ic_ifcs[] = {{
+  .base_timer = &htim3,
+  .engaged_channels = TIM_CHANNEL_1,
+},
+{  .base_timer = &htim3,
+  .engaged_channels = TIM_CHANNEL_4,
+},
+{
+  .base_timer = &htim4,
+  .engaged_channels = TIM_CHANNEL_1,
+}
+};
+
+size_t get_ic_tim_ifcs(struct hal_capture_tim_ifc ** hw_tim_ifcs)
+{
+  *hw_tim_ifcs = l_tim_ic_ifcs;
+
+  // Return the number of TIM interfaces
+  return (ARRAY_SIZE(l_tim_ic_ifcs));
+}
+
 uint8_t uart_rx_buf[500] = {0};
 volatile uint8_t cnt = 0;
 uint32_t t0 = 0, elapsed = 0;
@@ -162,21 +189,6 @@ volatile uint32_t ic_val_falling[2] = {0};
 volatile uint32_t pulse_width_us[2] = {0};
 volatile uint8_t waiting_for_falling[2] = {0};
 
-volatile uint32_t tim2_dt[4] = {0}, tim2_t0[4] = {0};
-static const uint32_t step_us[4] = {100, 1000, 10000, 100000};
-static const uint32_t chnls[] = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4};
-void hal_tim2_channel_cb(TIM_HandleTypeDef *htim)
-{
-
-	uint8_t idx = __builtin_ctz(htim->Channel);
-	uint32_t t1 = HAL_GetTick();
-	tim2_dt[idx] = t1 - tim2_t0[idx];
-	tim2_t0[idx] = t1;
-
-	uint32_t next = __HAL_TIM_GET_COMPARE(htim, chnls[idx]) + step_us[idx];
-	 __HAL_TIM_SET_COMPARE(htim, chnls[idx], next);
-
-}
 void tim3_ic_cb(TIM_HandleTypeDef *htim)
 {
   const uint8_t idx = 0;
@@ -301,7 +313,8 @@ int main(void)
                                  (uint8_t *)"Hello from AviNav Core!\r\n", 25);
 //  HAL_TIM_RegisterCallback(&htim2, HAL_TIM_PERIOD_ELAPSED_CB_ID, tim_elapsed);
 //  HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_4);
+    // HAL_TIM_IC_Start_IT()
+//  HAL_TIM_RegisterCallback(&htim2, HAL_TIM_PERIOD_ELAPSED_CB_ID, tim_elapsed);
   app();
   /* USER CODE END 2 */
 
@@ -474,17 +487,17 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 100;
+  sConfigOC.Pulse = 1000;
   if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 1000;
+  sConfigOC.Pulse = 10000;
   if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 10000;
+  sConfigOC.Pulse = 100000;
   if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
@@ -544,6 +557,10 @@ static void MX_TIM3_Init(void)
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
   if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -780,12 +797,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 PB2 PB10 PB12
-                           PB13 PB14 PB15 PB5
-                           PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_12
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_5
-                          |GPIO_PIN_7;
+  /*Configure GPIO pins : PB2 PB10 PB12 PB13
+                           PB14 PB15 PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
