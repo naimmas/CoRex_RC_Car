@@ -35,7 +35,7 @@ typedef struct st_stm32_ic_driver
     volatile bool_t             on_going[MP_TIMER_CAP_CHNL_CNT];
 } stm32_ic_driver_t;
 
-static stm32_ic_driver_t g_driver = { .base = { 0U }, .hal_drv = NULL };
+static stm32_ic_driver_t g_ic_drv = { .base = { 0U }, .hal_drv = NULL };
 
 static uint32_t hal_timers_slot[HAL_SUPPORTED_TIMERS_CNT] = { -1 };
 
@@ -114,17 +114,17 @@ static void cap_cb(TIM_HandleTypeDef* htim)
     volatile uint32_t drv_tim_idx = unhash_hal_slot(htim);
     volatile uint32_t channel     = __builtin_ctz(htim->Channel) << 2;
 
-    if (drv_tim_idx > g_driver.base.hw_inst_cnt)
+    if (drv_tim_idx > g_ic_drv.base.hw_inst_cnt)
     {
         return;
     }
 
-    g_driver.on_going[drv_tim_idx] = TRUE;
+    g_ic_drv.on_going[drv_tim_idx] = TRUE;
 
-    volatile union capture_data* cap_data = &g_driver.cap_data[drv_tim_idx];
+    volatile union capture_data* cap_data = &g_ic_drv.cap_data[drv_tim_idx];
     volatile uint32_t  ccap     = __HAL_TIM_GET_COMPARE(htim, channel);
 
-    switch (g_driver.req_cap_type[drv_tim_idx])
+    switch (g_ic_drv.req_cap_type[drv_tim_idx])
     {
         case MP_TIMER_CAP_TYPE_RISING_EDGE:
         case MP_TIMER_CAP_TYPE_FALLING_EDGE:
@@ -135,11 +135,11 @@ static void cap_cb(TIM_HandleTypeDef* htim)
 
             cap_data->edge_data.last_ccr = ccap;
 
-            if (g_driver.capture_cb[drv_tim_idx] != NULL)
+            if (g_ic_drv.capture_cb[drv_tim_idx] != NULL)
             {
-                g_driver.capture_cb[drv_tim_idx](drv_tim_idx, cap_data->edge_data.diff_ticks);
+                g_ic_drv.capture_cb[drv_tim_idx](drv_tim_idx, cap_data->edge_data.diff_ticks);
             }
-            if (g_driver.one_shot[drv_tim_idx])
+            if (g_ic_drv.one_shot[drv_tim_idx])
             {
                 HAL_TIM_IC_Stop_IT(htim, channel);
             }
@@ -180,12 +180,12 @@ static void cap_cb(TIM_HandleTypeDef* htim)
                 __HAL_TIM_SET_CAPTUREPOLARITY(htim, channel, TIM_INPUTCHANNELPOLARITY_RISING);
                 cap_data->pulse_width_data.waiting_edge = 0;
 
-                if (g_driver.capture_cb[drv_tim_idx] != NULL)
+                if (g_ic_drv.capture_cb[drv_tim_idx] != NULL)
                 {
-                    g_driver.capture_cb[drv_tim_idx](drv_tim_idx,
+                    g_ic_drv.capture_cb[drv_tim_idx](drv_tim_idx,
                                                      cap_data->pulse_width_data.pulse_width);
                 }
-                if (g_driver.one_shot[drv_tim_idx])
+                if (g_ic_drv.one_shot[drv_tim_idx])
                 {
                     HAL_TIM_IC_Stop_IT(htim, channel);
                 }
@@ -198,36 +198,36 @@ static void cap_cb(TIM_HandleTypeDef* htim)
     }
 
 
-    g_driver.on_going[drv_tim_idx] = FALSE;
+    g_ic_drv.on_going[drv_tim_idx] = FALSE;
 }
 
 static response_status_t init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    g_driver.base.hw_inst_cnt = get_ic_tim_ifcs(&(g_driver.hal_drv));
+    g_ic_drv.base.hw_inst_cnt = get_ic_tim_ifcs(&(g_ic_drv.hal_drv));
 
-    ASSERT_AND_RETURN(g_driver.base.hw_inst_cnt != ARRAY_SIZE(g_driver.capture_cb), RET_ERROR);
+    ASSERT_AND_RETURN(g_ic_drv.base.hw_inst_cnt != ARRAY_SIZE(g_ic_drv.capture_cb), RET_ERROR);
 
-    if (g_driver.base.hw_inst_cnt == 0)
+    if (g_ic_drv.base.hw_inst_cnt == 0)
     {
         ret_val = RET_NOT_SUPPORTED;
     }
     else
     {
-        for (uint8_t i = 0; i < g_driver.base.hw_inst_cnt; ++i)
+        for (uint8_t i = 0; i < g_ic_drv.base.hw_inst_cnt; ++i)
         {
-            if (g_driver.hal_drv[i].base_timer == NULL)
+            if (g_ic_drv.hal_drv[i].base_timer == NULL)
             {
                 ret_val = RET_ERROR;
                 break;
             }
             else
             {
-                hash_hal_timer(g_driver.hal_drv[i].base_timer,
-                               g_driver.hal_drv[i].engaged_channels,
+                hash_hal_timer(g_ic_drv.hal_drv[i].base_timer,
+                               g_ic_drv.hal_drv[i].engaged_channels,
                                i);
-                HAL_TIM_RegisterCallback(g_driver.hal_drv[i].base_timer,
+                HAL_TIM_RegisterCallback(g_ic_drv.hal_drv[i].base_timer,
                                          HAL_TIM_IC_CAPTURE_CB_ID,
                                          cap_cb);
             }
@@ -242,15 +242,15 @@ static response_status_t init(void)
 static void obtain_timer_from_channel(uint8_t p_channel, TIM_HandleTypeDef** base_timer,
                                       uint32_t* channel_to_activate)
 {
-    ASSERT_AND_RETURN(g_driver.hal_drv == NULL, );
+    ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, );
 
     uint32_t total = 0;
-    for (uint8_t i = 0; i < g_driver.base.hw_inst_cnt; i++)
+    for (uint8_t i = 0; i < g_ic_drv.base.hw_inst_cnt; i++)
     {
-        uint8_t engaged_channels_cnt = __builtin_popcount(g_driver.hal_drv[i].engaged_channels);
+        uint8_t engaged_channels_cnt = __builtin_popcount(g_ic_drv.hal_drv[i].engaged_channels);
         if (p_channel < total + engaged_channels_cnt)
         {
-            *base_timer          = g_driver.hal_drv[i].base_timer;
+            *base_timer          = g_ic_drv.hal_drv[i].base_timer;
             *channel_to_activate = p_channel - total;
             break;
         }
@@ -264,63 +264,63 @@ static void obtain_timer_from_channel(uint8_t p_channel, TIM_HandleTypeDef** bas
 static response_status_t req_edge_capture(uint8_t p_channel, uint8_t rising_falling_edge,
                                           bool_t one_shot)
 {
-    ASSERT_AND_RETURN(g_driver.hal_drv == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(rising_falling_edge > MP_TIMER_CAP_TYPE_FALLING_EDGE, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(g_driver.on_going[p_channel], RET_BUSY);
+    ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
     TIM_HandleTypeDef* base_timer = NULL;
     uint32_t           hal_chnl   = 0;
 
-    g_driver.req_cap_type[p_channel]      = rising_falling_edge;
-    memset((void*)&g_driver.cap_data[p_channel], 0, sizeof(union capture_data));
-    g_driver.one_shot[p_channel]          = one_shot;
-    __HAL_TIM_SET_COMPARE(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels, 0);
+    g_ic_drv.req_cap_type[p_channel]      = rising_falling_edge;
+    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
+    g_ic_drv.one_shot[p_channel]          = one_shot;
+    __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels, 0);
 
-    __HAL_TIM_SET_CAPTUREPOLARITY(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels, TIM_INPUTCHANNELPOLARITY_RISING);
-    hal_ret = HAL_TIM_IC_Start_IT(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels);
+    __HAL_TIM_SET_CAPTUREPOLARITY(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels, TIM_INPUTCHANNELPOLARITY_RISING);
+    hal_ret = HAL_TIM_IC_Start_IT(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels);
 
     return translate_hal_status(hal_ret);
 }
 
 static response_status_t req_pulse_capture(uint8_t p_channel, bool_t one_shot)
 {
-    ASSERT_AND_RETURN(g_driver.hal_drv == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(g_driver.on_going[p_channel], RET_BUSY);
+    ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
     TIM_HandleTypeDef* base_timer = NULL;
     uint32_t           hal_chnl   = 0;
 
-    g_driver.req_cap_type[p_channel] = MP_TIMER_CAP_TYPE_PULSE_WIDTH;
-    memset((void*)&g_driver.cap_data[p_channel], 0, sizeof(union capture_data));
-    g_driver.one_shot[p_channel]     = one_shot;
-    __HAL_TIM_SET_COMPARE(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels, 0);
+    g_ic_drv.req_cap_type[p_channel] = MP_TIMER_CAP_TYPE_PULSE_WIDTH;
+    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
+    g_ic_drv.one_shot[p_channel]     = one_shot;
+    __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels, 0);
 
-    __HAL_TIM_SET_CAPTUREPOLARITY(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels,
+    __HAL_TIM_SET_CAPTUREPOLARITY(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels,
                                   TIM_INPUTCHANNELPOLARITY_RISING);
 
-    hal_ret = HAL_TIM_IC_Start_IT(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels);
+    hal_ret = HAL_TIM_IC_Start_IT(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels);
 
     return translate_hal_status(hal_ret);
 }
 
 static response_status_t register_callback(uint8_t p_channel, timer_capture_callback_t p_callback)
 {
-    ASSERT_AND_RETURN(g_driver.hal_drv == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_callback == NULL, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
     __disable_irq();
-    g_driver.capture_cb[p_channel] = p_callback;
+    g_ic_drv.capture_cb[p_channel] = p_callback;
     __enable_irq();
 
     return ret_val;
@@ -328,23 +328,23 @@ static response_status_t register_callback(uint8_t p_channel, timer_capture_call
 
 static response_status_t get_data(uint8_t p_channel, uint32_t* p_data)
 {
-    ASSERT_AND_RETURN(g_driver.hal_drv == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(p_data == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(g_driver.on_going[p_channel], RET_BUSY);
+    ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     response_status_t ret_val = RET_OK;
 
-    switch (g_driver.req_cap_type[p_channel])
+    switch (g_ic_drv.req_cap_type[p_channel])
         {
             case MP_TIMER_CAP_TYPE_RISING_EDGE:
             case MP_TIMER_CAP_TYPE_FALLING_EDGE:
-                *p_data = g_driver.cap_data[p_channel].edge_data.diff_ticks;
+                *p_data = g_ic_drv.cap_data[p_channel].edge_data.diff_ticks;
                 ret_val = RET_OK;
                 break;
 
             case MP_TIMER_CAP_TYPE_PULSE_WIDTH:
-                *p_data = g_driver.cap_data[p_channel].pulse_width_data.pulse_width;
+                *p_data = g_ic_drv.cap_data[p_channel].pulse_width_data.pulse_width;
                 ret_val = RET_OK;
                 break;
 
@@ -363,9 +363,9 @@ static response_status_t get_data(uint8_t p_channel, uint32_t* p_data)
 
 static response_status_t abort(uint8_t p_channel)
 {
-    ASSERT_AND_RETURN(g_driver.hal_drv == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(g_driver.on_going[p_channel], RET_BUSY);
+    ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
     TIM_HandleTypeDef* base_timer = NULL;
@@ -373,9 +373,9 @@ static response_status_t abort(uint8_t p_channel)
 
     obtain_timer_from_channel(p_channel, &base_timer, &hal_chnl);
 
-    memset((void*)&g_driver.cap_data[p_channel], 0, sizeof(union capture_data));
-    __HAL_TIM_SET_COMPARE(g_driver.hal_drv[p_channel].base_timer,
-                                  g_driver.hal_drv[p_channel].engaged_channels, 0);
+    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
+    __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
+                                  g_ic_drv.hal_drv[p_channel].engaged_channels, 0);
 
     hal_ret = HAL_TIM_IC_Stop_IT(base_timer, hal_chnl);
 
@@ -384,7 +384,7 @@ static response_status_t abort(uint8_t p_channel)
         return translate_hal_status(hal_ret);
     }
 
-    g_driver.on_going[p_channel] = FALSE;
+    g_ic_drv.on_going[p_channel] = FALSE;
 
     return RET_OK;
 }
@@ -402,9 +402,9 @@ static struct st_ic_driver_ifc g_interface = {
 timer_capture_driver_t* timer_capture_driver_register(void)
 {
 
-    memset(&g_driver, 0, sizeof(g_driver));
+    memset(&g_ic_drv, 0, sizeof(g_ic_drv));
     memset(hal_timers_slot, (uint32_t)-1, sizeof(hal_timers_slot));
 
-    g_driver.base.api = &g_interface;
-    return (timer_capture_driver_t*)&g_driver;
+    g_ic_drv.base.api = &g_interface;
+    return (timer_capture_driver_t*)&g_ic_drv;
 }

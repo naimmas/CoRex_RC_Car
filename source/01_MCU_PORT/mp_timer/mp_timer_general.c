@@ -13,7 +13,7 @@ typedef struct st_stm32_timer_driver
     void (*timers_user_cb[MP_TIMER_CNT])(void);
 } stm32_timer_driver_t;
 
-static stm32_timer_driver_t g_driver = {
+static stm32_timer_driver_t g_timer_drv = {
     .base               = { 0U },
     .hw_inst            = NULL,
     .sub_timers_periods = { 0 },
@@ -28,10 +28,10 @@ void hal_channel_tim_cb(TIM_HandleTypeDef* htim)
                                          &htim->Instance->CCR4 };
     uint8_t                  idx     = __builtin_ctz(htim->Channel);
 
-    *(ccrs[idx]) += g_driver.sub_timers_periods[idx];
-    if (g_driver.timers_user_cb[idx] != NULL)
+    *(ccrs[idx]) += g_timer_drv.sub_timers_periods[idx];
+    if (g_timer_drv.timers_user_cb[idx] != NULL)
     {
-        g_driver.timers_user_cb[idx]();
+        g_timer_drv.timers_user_cb[idx]();
     }
 }
 
@@ -39,14 +39,14 @@ static response_status_t init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    get_base_tim_ifc(&(g_driver.hw_inst));
+    get_base_tim_ifc(&(g_timer_drv.hw_inst));
 
-    if (g_driver.hw_inst != NULL)
+    if (g_timer_drv.hw_inst != NULL)
     {
-        g_driver.sub_timers_periods[0] = g_driver.hw_inst->Instance->CCR1;
-        g_driver.sub_timers_periods[1] = g_driver.hw_inst->Instance->CCR2;
-        g_driver.sub_timers_periods[2] = g_driver.hw_inst->Instance->CCR3;
-        g_driver.sub_timers_periods[3] = g_driver.hw_inst->Instance->CCR4;
+        g_timer_drv.sub_timers_periods[0] = g_timer_drv.hw_inst->Instance->CCR1;
+        g_timer_drv.sub_timers_periods[1] = g_timer_drv.hw_inst->Instance->CCR2;
+        g_timer_drv.sub_timers_periods[2] = g_timer_drv.hw_inst->Instance->CCR3;
+        g_timer_drv.sub_timers_periods[3] = g_timer_drv.hw_inst->Instance->CCR4;
         ret_val                        = RET_OK;
     }
     else
@@ -59,7 +59,7 @@ static response_status_t init(void)
 
 static response_status_t start(uint8_t p_timer_id)
 {
-    ASSERT_AND_RETURN(g_driver.hw_inst == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_PARAM_ERROR);
 
     HAL_StatusTypeDef hal_ret = HAL_OK;
@@ -67,16 +67,16 @@ static response_status_t start(uint8_t p_timer_id)
     switch (p_timer_id)
     {
         case MP_TIMER_10US_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_driver.hw_inst, TIM_CHANNEL_1);
+            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_1);
             break;
         case MP_TIMER_1MS_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_driver.hw_inst, TIM_CHANNEL_2);
+            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_2);
             break;
         case MP_TIMER_10MS_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_driver.hw_inst, TIM_CHANNEL_3);
+            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_3);
             break;
         case MP_TIMER_100MS_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_driver.hw_inst, TIM_CHANNEL_4);
+            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
             break;
         default:
             return RET_PARAM_ERROR;
@@ -87,7 +87,7 @@ static response_status_t start(uint8_t p_timer_id)
 
 static response_status_t stop(uint8_t p_timer_id)
 {
-    ASSERT_AND_RETURN(g_driver.hw_inst == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_PARAM_ERROR);
 
     HAL_StatusTypeDef hal_ret = HAL_OK;
@@ -95,16 +95,16 @@ static response_status_t stop(uint8_t p_timer_id)
     switch (p_timer_id)
     {
         case MP_TIMER_10US_ID:
-            hal_ret = HAL_TIM_OC_Stop_IT(g_driver.hw_inst, TIM_CHANNEL_1);
+            hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_1);
             break;
         case MP_TIMER_1MS_ID:
-            hal_ret = HAL_TIM_OC_Stop_IT(g_driver.hw_inst, TIM_CHANNEL_2);
+            hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_2);
             break;
         case MP_TIMER_10MS_ID:
-            hal_ret = HAL_TIM_OC_Stop_IT(g_driver.hw_inst, TIM_CHANNEL_3);
+            hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_3);
             break;
         case MP_TIMER_100MS_ID:
-            hal_ret = HAL_TIM_OC_Stop_IT(g_driver.hw_inst, TIM_CHANNEL_4);
+            hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
 
             break;
             return RET_PARAM_ERROR;
@@ -115,20 +115,20 @@ static response_status_t stop(uint8_t p_timer_id)
 
 static response_status_t register_callback(uint8_t p_timer_id, void (*callback)(void))
 {
-    ASSERT_AND_RETURN(g_driver.hw_inst == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(callback == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_NOT_SUPPORTED);
 
     __disable_irq();
     // If it's the first time we register a callback for this timer, we need to register the HAL
     // callback
-    if (g_driver.timers_user_cb[p_timer_id] == NULL)
+    if (g_timer_drv.timers_user_cb[p_timer_id] == NULL)
     {
-        HAL_TIM_RegisterCallback(g_driver.hw_inst,
+        HAL_TIM_RegisterCallback(g_timer_drv.hw_inst,
                                  HAL_TIM_OC_DELAY_ELAPSED_CB_ID,
                                  hal_channel_tim_cb);
     }
-    g_driver.timers_user_cb[p_timer_id] = callback;
+    g_timer_drv.timers_user_cb[p_timer_id] = callback;
     __enable_irq();
     return RET_OK;
 }
@@ -138,10 +138,10 @@ static response_status_t get_state(void)
 
     return RET_NOT_SUPPORTED;
 
-    ASSERT_AND_RETURN(g_driver.hw_inst == NULL, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
 
     response_status_t    ret_val   = RET_OK;
-    HAL_TIM_StateTypeDef tim_state = HAL_TIM_Base_GetState(g_driver.hw_inst);
+    HAL_TIM_StateTypeDef tim_state = HAL_TIM_Base_GetState(g_timer_drv.hw_inst);
 
     switch (tim_state)
     {
@@ -177,6 +177,6 @@ static struct st_timer_driver_ifc g_interface = {
 
 timer_driver_t* timer_driver_register(void)
 {
-    g_driver.base.api = &g_interface;
-    return (timer_driver_t*)&g_driver;
+    g_timer_drv.base.api = &g_interface;
+    return (timer_driver_t*)&g_timer_drv;
 }
