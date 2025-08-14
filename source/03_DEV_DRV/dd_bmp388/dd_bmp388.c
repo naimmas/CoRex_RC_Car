@@ -3,7 +3,7 @@
 
 #include "dd_bmp388_defs.h"
 #include "ha_iic/ha_iic.h"
-#include "ps_app_timer/ps_app_timer.h"
+#include "ha_timer/ha_timer.h"
 #include "string.h"
 #include "su_common.h"
 
@@ -33,7 +33,7 @@ typedef enum
     BMP388_CMD_SOFT_RESET  = 0xB6,
 } bmp388_cmds;
 
-static driver_t g_driver[BMP388_DEV_CNT];
+static driver_t g_bmp_drv[BMP388_DEV_CNT];
 
 /**
  * @brief This internal function writes data to a specific register of the
@@ -374,7 +374,7 @@ static bmp388_status_t read_temp(bmp388_dev_t* ppt_dev)
     if (((ppt_dev->settings.int_settings.int_enable) & (BMP388_INT_ENABLE_DRDY))
         == (BMP388_INT_ENABLE_DRDY))
     {
-        pres_rdy = TRUE;
+        temp_rdy = TRUE;
     }
     else
     {
@@ -434,7 +434,7 @@ static response_status_t send_cmd(bmp388_dev_t* ppt_dev, bmp388_cmds p_cmd, uint
             }
         }
         max_retry_cnt--;
-        ps_hard_delay_ms(10U); // Wait for 10 ms before retrying
+        ha_timer_hard_delay_ms(10U); // Wait for 10 ms before retrying
     }
 
     return ret_val;
@@ -768,7 +768,7 @@ bmp388_status_t dd_bmp388_reset(bmp388_dev_t* ppt_dev)
     api_ret_val                   = send_cmd(ppt_dev, BMP388_CMD_SOFT_RESET, 100U);
     if (api_ret_val == RET_OK)
     {
-        ps_hard_delay_ms(25U); // Wait for 25 ms after reset
+        ha_timer_hard_delay_ms(25U); // Wait for 25 ms after reset
         api_ret_val = read_register(ppt_dev, &reg_val, DEFAULT_IIC_REG_SZ, BMP388_REG_EVENT);
         ret_val     = dd_bmp388_get_error_state(ppt_dev);
     }
@@ -800,7 +800,7 @@ bmp388_status_t dd_bmp388_reset(bmp388_dev_t* ppt_dev)
  */
 bmp388_dev_t* dd_bmp388_get_dev(bmp388_devices_t p_dev_id)
 {
-    return &g_driver[p_dev_id].dev;
+    return &g_bmp_drv[p_dev_id].dev;
 }
 
 /**
@@ -817,7 +817,7 @@ response_status_t dd_bmp388_init(bmp388_dev_t** ppt_dev, bmp388_devices_t p_dev_
     ASSERT_AND_RETURN(ppt_dev == NULL, RET_PARAM_ERROR);
 
     response_status_t ret_val        = RET_OK;
-    driver_t*         pt_curr_driver = &g_driver[p_dev_id];
+    driver_t*         pt_curr_driver = &g_bmp_drv[p_dev_id];
 
     ret_val = ha_iic_init();
 
