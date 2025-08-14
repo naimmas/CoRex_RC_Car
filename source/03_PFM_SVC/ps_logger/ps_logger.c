@@ -4,11 +4,10 @@
 
 #include "ps_logger.h"
 
-#include "ha_uart/ha_uart.h"
-#include "stdio.h"
-#include "string.h"
+#include "serial_ifc.h"
 #include "su_string/su_string.h"
-
+#include "su_common.h"
+#include "string.h"
 /***************************************************************************************************
  * Macro definitions.
  ***************************************************************************************************/
@@ -50,7 +49,7 @@
  * Local data definitions.
  ***************************************************************************************************/
 
-static char          g_debug_msg[MAX_DBG_MSG_LEN] = { '\0' };
+static char          g_debug_msg[LOGGER_MSG_MAX_LENGTH] = { '\0' };
 static debug_level_t g_debug_thld                 = DBG_LVL_DEBUG;
 
 /***************************************************************************************************
@@ -125,7 +124,7 @@ static void process_message(const char* ppt_msg, uint16_t* ppt_bytes_written,
     float    current_param = 0.0F;
 
     /// Iterate through the message
-    for (uint16_t i = 0; (i < MAX_DBG_MSG_LEN) && (ppt_msg[i] != '\0'); i++)
+    for (uint16_t i = 0; (i < LOGGER_MSG_MAX_LENGTH) && (ppt_msg[i] != '\0'); i++)
     {
         /// If the current character is a parameter qualifier
         if (ppt_msg[i] == '%' && param_count < MAX_PARAMETER_COUNT)
@@ -195,7 +194,7 @@ static void add_log_prefix(uint8_t p_lvl, const char* ppt_func_name, uint16_t* p
     };
 
     /// Copy the log level prefix to the debug message
-    strlcpy(&g_debug_msg[*ppt_bytes_written], log_strings[p_lvl], MAX_DBG_MSG_LEN);
+    strlcpy(&g_debug_msg[*ppt_bytes_written], log_strings[p_lvl], LOGGER_MSG_MAX_LENGTH);
 
     *ppt_bytes_written = strlen(log_strings[p_lvl]);
 
@@ -218,12 +217,17 @@ static void add_log_prefix(uint8_t p_lvl, const char* ppt_func_name, uint16_t* p
  * interface and prints test message.
  *
  */
-void ps_logger_init(void)
+response_status_t ps_logger_init(void)
 {
+    response_status_t ret_val = RET_OK;
 #ifdef LOGGER_ENABLED
-    ha_uart_init();
-    LOG_INFO("logger is ready\n");
+    ret_val = serial_ifc_init();
+    if (ret_val == RET_OK)
+    {
+        LOG_INFO("logger is ready\n");
+    }
 #endif /* LOGGER_ENABLED */
+return ret_val;
 }
 
 /**
@@ -239,10 +243,7 @@ void ps_logger_set_threshold(debug_level_t p_lvl)
         g_debug_thld = p_lvl;
     }
 }
-void ps_logger_send_raw(uint8_t* ppt_msg, uint16_t p_len)
-{
-    ha_uart_transmit(LOGGER_UART_PORT, ppt_msg, p_len, DEFAUL_UART_SEND_TIMEOUT);
-}
+
 /**
  * @brief This function prints the log message with the specified log level.
  * Supported qualifiers are %d, %f and %x . If the format contains no
@@ -268,7 +269,7 @@ void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name, const char* 
     /// Filter the log level based on the threshold
     if (p_lvl <= g_debug_thld)
     {
-        memset(g_debug_msg, '\0', MAX_DBG_MSG_LEN);
+        memset(g_debug_msg, '\0', LOGGER_MSG_MAX_LENGTH);
 
         /// If the message is only a newline character, just send it
         if (ppt_msg[0] == '\n' && ppt_msg[1] == '\0')
@@ -285,15 +286,6 @@ void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name, const char* 
             add_log_prefix(p_lvl, ppt_func_name, &bytes_written);
             process_message(ppt_msg, &bytes_written, (float*)p_params_list);
         }
-#if (LOGGER_OUTPUT_CHANNEL == LOGGER_CHNL_UART)
-        ha_uart_transmit(LOGGER_UART_PORT,
-                         (uint8_t*)g_debug_msg,
-                         bytes_written,
-                         DEFAUL_UART_SEND_TIMEOUT);
-#elif (LOGGER_OUTPUT_CHANNEL == LOGGER_CHNL_DEBUG)
-        printf("%s", g_debug_msg);
-#else
-#error "Define logger channel"
-#endif
+    serial_ifc_send((const uint8_t*)g_debug_msg, bytes_written);
     }
 }
