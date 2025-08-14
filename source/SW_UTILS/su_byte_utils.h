@@ -2,10 +2,10 @@
 #define SU_BYTE_UTILS_H
 
 /* Single-bit helpers */
-#define BIT_GET(n)          (1u << (n))
-#define BIT_SET(v, n)    ((v) |=  BIT_GET(n))
-#define BIT_CLR(v, n)    ((v) &= ~BIT_GET(n))
-#define BIT_TOGGLE(v, n) ((v) ^=  BIT_GET(n))
+#define BIT_GET(v, n)    ((v) & (1U << (n)))
+#define BIT_SET(v, n)    ((v) |=  (1u << (n)))
+#define BIT_CLR(v, n)    ((v) &= ~(1u << (n)))
+#define BIT_TOGGLE(v, n) ((v) ^=  (1u << (n)))
 
 /* Extract bytes */
 #define BYTE_LOW(x)    ((uint8_t)((x) & 0xFF))
