@@ -8,6 +8,23 @@ typedef struct st_ic_driver_ifc* ic_driver_ifc;
 
 typedef void (*timer_capture_callback_t)(uint8_t, uint32_t);
 
+typedef enum
+{
+    MP_TIMER_CAP_TYPE_RISING_EDGE = 0,
+    MP_TIMER_CAP_TYPE_FALLING_EDGE,
+    MP_TIMER_CAP_TYPE_PULSE_WIDTH,
+    MP_TIMER_CAP_TYPE_FREQUENCY,
+    MP_TIMER_CAP_TYPE_CNT
+} mp_timer_capture_type_t;
+
+typedef enum
+{
+    MP_TIMER_CAP_CHNL_1 = 0,
+    MP_TIMER_CAP_CHNL_2,
+    MP_TIMER_CAP_CHNL_3,
+    MP_TIMER_CAP_CHNL_CNT
+} mp_timer_capture_channels_t;
+
 typedef struct st_ic_driver
 {
     ic_driver_ifc api;
@@ -24,22 +41,15 @@ struct st_ic_driver_ifc
      */
     response_status_t (*init)(void);
 
-    /**
-     * @brief This function shall start the input capture hardware.
-     *
-     * @param[in] p_timer_id The ID of the timer to start @ref mp_timer_id_t.
-     *
-     * @retval `RET_OK` if the timer is started successfully, else error code.
-     */
-    response_status_t (*capture_pulse)(uint8_t, bool_t);
+    response_status_t (*capture_pulse)(mp_timer_capture_channels_t, bool_t);
 
-    response_status_t (*capture_frequency)(uint8_t, bool_t);
+    response_status_t (*capture_frequency)(mp_timer_capture_channels_t, bool_t);
 
-    response_status_t (*capture_edge)(uint8_t, uint8_t, bool_t);
+    response_status_t (*capture_edge)(mp_timer_capture_channels_t, mp_timer_capture_type_t, bool_t);
 
-    response_status_t (*register_callback)(uint8_t, timer_capture_callback_t);
-    response_status_t (*get_data)(uint8_t, uint32_t*);
-    response_status_t (*abort)(uint8_t);
+    response_status_t (*register_callback)(mp_timer_capture_channels_t, timer_capture_callback_t);
+    response_status_t (*get_data)(mp_timer_capture_channels_t, uint32_t*);
+    response_status_t (*stop_capture)(mp_timer_capture_channels_t);
 };
 
 #endif // HA_INPUT_CAPTURE_PRIVATE_H
