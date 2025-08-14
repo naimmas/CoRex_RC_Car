@@ -4,7 +4,7 @@
 #include "ha_timer_private.h"
 #include "mp_timer/mp_timer_general.h"
 
-static timer_driver g_pt_timer_drv          = NULL;
+static timer_driver g_pt_timer_drv    = NULL;
 static bool_t       g_timer_drv_ready = FALSE;
 
 response_status_t ha_timer_init(void)
@@ -85,6 +85,23 @@ response_status_t ha_timer_register_callback(gp_timers_t p_timer, void (*callbac
 
 void ha_timer_hard_delay_ms(uint32_t p_delay_ms)
 {
-    ASSERT_AND_RETURN(g_timer_drv_ready != TRUE,);
-    g_pt_timer_drv->api->hard_delay(p_delay_ms);
+    ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, );
+    g_pt_timer_drv->api->hard_delay(p_delay_ms, MP_TIMER_UNIT_MS);
+}
+
+void ha_timer_hard_delay_us(uint32_t p_delay_ms)
+{
+    ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, );
+    g_pt_timer_drv->api->hard_delay(p_delay_ms, MP_TIMER_UNIT_US);
+}
+
+uint32_t ha_timer_get_cpu_time_ms(void)
+{
+    ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, 0);
+    return g_pt_timer_drv->api->get_cpu_time(MP_TIMER_UNIT_MS);
+}
+uint32_t ha_timer_get_cpu_time_us(void)
+{
+    ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, 0);
+    return g_pt_timer_drv->api->get_cpu_time(MP_TIMER_UNIT_US);
 }

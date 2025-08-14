@@ -21,6 +21,8 @@ response_status_t ha_timer_stop(gp_timers_t p_timer);
 response_status_t ha_timer_get_state(gp_timers_t p_timer);
 response_status_t ha_timer_get_frequency(gp_timers_t p_timer, uint32_t* ppt_frequency);
 response_status_t ha_timer_register_callback(gp_timers_t p_timer, void (*callback)(void));
-void ha_timer_hard_delay_ms(uint32_t p_delay_ms);
-
+void              ha_timer_hard_delay_ms(uint32_t p_delay_ms);
+void              ha_timer_hard_delay_us(uint32_t p_delay_ms);
+uint32_t          ha_timer_get_cpu_time_ms(void);
+uint32_t          ha_timer_get_cpu_time_us(void);
 #endif // HA_TIMER_H
