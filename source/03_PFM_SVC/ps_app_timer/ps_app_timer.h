@@ -3,9 +3,6 @@
 
 #include "su_common.h"
 
-void     ps_hard_delay_ms(uint32_t p_delay_ms);
-uint32_t ps_get_cpu_ms();
-
 #define MAX_TIMER_PERIOD (60000000U)
 #define MAX_USER_TIMER (10U)
 typedef void (*app_timer_callback_t)(void);
@@ -31,5 +28,6 @@ response_status_t ps_app_timer_delete(app_timer_handler_t* p_timer_handler);
 response_status_t ps_app_timer_start(app_timer_handler_t* p_timer_handler, uint32_t p_timer_period,
                                      app_timer_unit_t p_time_unit);
 response_status_t ps_app_timer_stop(app_timer_handler_t* p_timer_handler);
-
+response_status_t ps_app_timer_update_period(app_timer_handler_t* p_timer_handler, uint32_t p_new_period,
+                                                  app_timer_unit_t p_time_unit);
 #endif // PS_APP_TIMER_H
