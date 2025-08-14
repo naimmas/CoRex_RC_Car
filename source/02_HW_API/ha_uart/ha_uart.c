@@ -5,7 +5,7 @@
 #include "stddef.h"
 #include "su_common.h"
 
-static uart_driver g_pt_uart_drv          = NULL;
+static uart_driver g_pt_uart_drv    = NULL;
 static bool_t      g_uart_drv_ready = FALSE;
 
 /**
@@ -60,6 +60,44 @@ response_status_t ha_uart_receive(uart_comm_port_t p_port, uint8_t* ppt_data_buf
     return ret_val;
 }
 
+response_status_t ha_uart_dma_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer, size_t p_data_size)
+{
+    ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_data_size == 0, RET_PARAM_ERROR);
+
+    response_status_t ret_val = RET_OK;
+
+    ret_val = g_pt_uart_drv->api->dma_transmit_request(p_port, ppt_data_buffer, p_data_size);
+
+    return ret_val;
+}
+
+response_status_t ha_uart_dma_stop(uart_comm_port_t p_port)
+{
+    ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
+
+    response_status_t ret_val = RET_OK;
+
+    ret_val = g_pt_uart_drv->api->dma_transmit_abort(p_port);
+
+    return ret_val;
+}
+
+response_status_t ha_uart_dma_register_callback(uart_comm_port_t p_port, uart_dma_evt_cb p_evt_cb)
+{
+    ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
+
+    response_status_t ret_val = RET_OK;
+
+    ret_val = g_pt_uart_drv->api->dma_register_cb(p_port, (dma_tx_evt_cb)p_evt_cb);
+
+    return ret_val;
+}
+
 /**
  * @brief This function initializes the UART driver once per power cycle.
  * It has no consequences for multiple calls.
@@ -81,7 +119,7 @@ response_status_t ha_uart_init(void)
         else
         {
             g_pt_uart_drv->hw_inst_cnt = 0;
-            ret_val                  = g_pt_uart_drv->api->init();
+            ret_val                    = g_pt_uart_drv->api->init();
             if (ret_val == RET_OK)
             {
                 g_uart_drv_ready = TRUE;
