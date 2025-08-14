@@ -6,8 +6,8 @@
 #include "stdint.h"
 #include "su_common.h"
 
-static gpio_driver g_pt_driver          = NULL;
-static bool_t      g_driver_initialized = FALSE;
+static gpio_driver g_pt_io_drv          = NULL;
+static bool_t      g_io_drv_ready = FALSE;
 
 /**
  * @brief This function sets the pin state to logic high or low.
@@ -19,10 +19,10 @@ static bool_t      g_driver_initialized = FALSE;
  */
 response_status_t ha_gpio_set(gpio_pins_t p_pin, gpio_pin_state_t p_value)
 {
-    ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_io_drv_ready == FALSE, RET_NOT_INITIALIZED);
     /// Ensure the pin is an output pin
     ASSERT_AND_RETURN(p_pin >= GP_OUT_PIN_CNT, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(p_pin >= g_pt_driver->hw_pin_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_pin >= g_pt_io_drv->hw_pin_cnt, RET_NOT_SUPPORTED);
 
     bool_t            pin_val = 0U;
     response_status_t ret_val = RET_OK;
@@ -39,7 +39,7 @@ response_status_t ha_gpio_set(gpio_pins_t p_pin, gpio_pin_state_t p_value)
             return RET_PARAM_ERROR;
     }
 
-    ret_val = g_pt_driver->api->write(p_pin, pin_val);
+    ret_val = g_pt_io_drv->api->write(p_pin, pin_val);
 
     return ret_val;
 }
@@ -53,16 +53,16 @@ response_status_t ha_gpio_set(gpio_pins_t p_pin, gpio_pin_state_t p_value)
  */
 response_status_t ha_gpio_get(gpio_pins_t p_pin, gpio_pin_state_t* ppt_value)
 {
-    ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_io_drv_ready == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_pin >= GP_PIN_CNT, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(p_pin >= g_pt_driver->hw_pin_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_pin >= g_pt_io_drv->hw_pin_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_value == NULL, RET_PARAM_ERROR);
 
     bool_t pin_val = 0U;
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->read(p_pin, &pin_val);
+    ret_val = g_pt_io_drv->api->read(p_pin, &pin_val);
 
     if (ret_val == RET_OK)
     {
@@ -93,11 +93,11 @@ response_status_t ha_gpio_get(gpio_pins_t p_pin, gpio_pin_state_t* ppt_value)
  */
 response_status_t ha_gpio_toggle(gpio_pins_t p_pin)
 {
-    ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(g_io_drv_ready == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_pin >= GP_OUT_PIN_CNT, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(p_pin >= g_pt_driver->hw_pin_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_pin >= g_pt_io_drv->hw_pin_cnt, RET_NOT_SUPPORTED);
     response_status_t ret_val = RET_OK;
-    ret_val                   = g_pt_driver->api->toggle(p_pin);
+    ret_val                   = g_pt_io_drv->api->toggle(p_pin);
 
     return ret_val;
 }
@@ -111,22 +111,22 @@ response_status_t ha_gpio_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    if (g_driver_initialized != TRUE)
+    if (g_io_drv_ready != TRUE)
     {
-        g_pt_driver = gpio_driver_register();
+        g_pt_io_drv = gpio_driver_register();
 
-        if (g_pt_driver == NULL)
+        if (g_pt_io_drv == NULL)
         {
             ret_val = RET_ERROR;
         }
         else
         {
-            g_pt_driver->hw_pin_cnt = 0;
-            ret_val                 = g_pt_driver->api->init();
+            g_pt_io_drv->hw_pin_cnt = 0;
+            ret_val                 = g_pt_io_drv->api->init();
 
             if (ret_val == RET_OK)
             {
-                g_driver_initialized = TRUE;
+                g_io_drv_ready = TRUE;
             }
         }
     }

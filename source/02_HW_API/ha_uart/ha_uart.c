@@ -5,8 +5,8 @@
 #include "stddef.h"
 #include "su_common.h"
 
-static uart_driver g_pt_driver          = NULL;
-static bool_t      g_driver_initialized = FALSE;
+static uart_driver g_pt_uart_drv          = NULL;
+static bool_t      g_uart_drv_ready = FALSE;
 
 /**
  * @brief This function transmits data over a UART communication port.
@@ -22,14 +22,14 @@ static bool_t      g_driver_initialized = FALSE;
 response_status_t ha_uart_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
                                    size_t p_data_size, timeout_t p_timeout)
 {
-    ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_data_size == 0, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->transmit(p_port, ppt_data_buffer, p_data_size, p_timeout);
+    ret_val = g_pt_uart_drv->api->transmit(p_port, ppt_data_buffer, p_data_size, p_timeout);
     return ret_val;
 }
 
@@ -48,14 +48,14 @@ response_status_t ha_uart_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_bu
 response_status_t ha_uart_receive(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
                                   size_t p_data_size, timeout_t p_timeout)
 {
-    ASSERT_AND_RETURN(g_driver_initialized == FALSE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_data_size == 0, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->receive(p_port, ppt_data_buffer, p_data_size, p_timeout);
+    ret_val = g_pt_uart_drv->api->receive(p_port, ppt_data_buffer, p_data_size, p_timeout);
 
     return ret_val;
 }
@@ -70,21 +70,21 @@ response_status_t ha_uart_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    if (g_driver_initialized != TRUE)
+    if (g_uart_drv_ready != TRUE)
     {
-        g_pt_driver = uart_driver_register();
+        g_pt_uart_drv = uart_driver_register();
 
-        if (g_pt_driver == NULL)
+        if (g_pt_uart_drv == NULL)
         {
             ret_val = RET_ERROR;
         }
         else
         {
-            g_pt_driver->hw_inst_cnt = 0;
-            ret_val                  = g_pt_driver->api->init();
+            g_pt_uart_drv->hw_inst_cnt = 0;
+            ret_val                  = g_pt_uart_drv->api->init();
             if (ret_val == RET_OK)
             {
-                g_driver_initialized = TRUE;
+                g_uart_drv_ready = TRUE;
             }
         }
     }

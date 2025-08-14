@@ -5,8 +5,8 @@
 #include "stddef.h"
 #include "su_common.h"
 
-static iic_driver g_pt_driver          = NULL;
-static bool_t     g_driver_initialized = FALSE;
+static iic_driver g_pt_iic_drv          = NULL;
+static bool_t     g_iic_drv_ready = FALSE;
 
 /**
  * @brief This function sends data to an I2C device.
@@ -23,8 +23,8 @@ response_status_t ha_iic_master_write(iic_comm_port_t p_port, uint8_t p_slave_ad
                                       const uint8_t* ppt_data_buffer, size_t p_data_size,
                                       timeout_t p_timeout_ms)
 {
-    ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_iic_drv_ready != TRUE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_iic_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_data_size == 0, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timeout_ms == 0, RET_PARAM_ERROR);
@@ -32,7 +32,7 @@ response_status_t ha_iic_master_write(iic_comm_port_t p_port, uint8_t p_slave_ad
     response_status_t ret_val = RET_OK;
 
     ret_val =
-      g_pt_driver->api->write(p_port, p_slave_addr, ppt_data_buffer, p_data_size, p_timeout_ms);
+      g_pt_iic_drv->api->write(p_port, p_slave_addr, ppt_data_buffer, p_data_size, p_timeout_ms);
 
     return ret_val;
 }
@@ -53,8 +53,8 @@ response_status_t ha_iic_master_read(iic_comm_port_t p_port, uint8_t p_slave_add
                                      uint8_t* ppt_data_buffer, size_t p_data_size,
                                      timeout_t p_timeout_ms)
 {
-    ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_iic_drv_ready != TRUE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_iic_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_data_size == 0, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timeout_ms == 0, RET_PARAM_ERROR);
@@ -62,7 +62,7 @@ response_status_t ha_iic_master_read(iic_comm_port_t p_port, uint8_t p_slave_add
     response_status_t ret_val = RET_OK;
 
     ret_val =
-      g_pt_driver->api->read(p_port, p_slave_addr, ppt_data_buffer, p_data_size, p_timeout_ms);
+      g_pt_iic_drv->api->read(p_port, p_slave_addr, ppt_data_buffer, p_data_size, p_timeout_ms);
 
     return ret_val;
 }
@@ -86,15 +86,15 @@ response_status_t ha_iic_master_mem_write(iic_comm_port_t p_port, uint8_t p_slav
                                           uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
                                           timeout_t p_timeout_ms)
 {
-    ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_iic_drv_ready != TRUE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_iic_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_data_size == 0, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timeout_ms == 0, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->mem_write(p_port,
+    ret_val = g_pt_iic_drv->api->mem_write(p_port,
                                           p_slave_addr,
                                           p_mem_addr,
                                           p_mem_size,
@@ -125,15 +125,15 @@ response_status_t ha_iic_master_mem_read(iic_comm_port_t p_port, uint8_t p_slave
                                          uint16_t p_mem_addr, i2c_mem_size_t p_mem_size,
                                          timeout_t p_timeout_ms)
 {
-    ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_iic_drv_ready != TRUE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_iic_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_data_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_mem_size == 0, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timeout_ms == 0, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->mem_read(p_port,
+    ret_val = g_pt_iic_drv->api->mem_read(p_port,
                                          p_slave_addr,
                                          p_mem_addr,
                                          p_mem_size,
@@ -165,12 +165,12 @@ response_status_t ha_iic_bus_recover(iic_comm_port_t p_port)
 response_status_t ha_iic_dev_check(iic_comm_port_t p_port, uint8_t p_dev_addr,
                                    timeout_t p_timeout_ms)
 {
-    ASSERT_AND_RETURN(g_driver_initialized != TRUE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_port >= g_pt_driver->hw_inst_cnt, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(g_iic_drv_ready != TRUE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(p_port >= g_pt_iic_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_driver->api->dev_check(p_port, p_dev_addr, p_timeout_ms);
+    ret_val = g_pt_iic_drv->api->dev_check(p_port, p_dev_addr, p_timeout_ms);
 
     return ret_val;
 }
@@ -184,21 +184,21 @@ response_status_t ha_iic_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    if (g_driver_initialized != TRUE)
+    if (g_iic_drv_ready != TRUE)
     {
-        g_pt_driver = iic_driver_register();
+        g_pt_iic_drv = iic_driver_register();
 
-        if (g_pt_driver == NULL)
+        if (g_pt_iic_drv == NULL)
         {
             ret_val = RET_ERROR;
         }
         else
         {
-            g_pt_driver->hw_inst_cnt = 0;
-            ret_val                  = g_pt_driver->api->init();
+            g_pt_iic_drv->hw_inst_cnt = 0;
+            ret_val                  = g_pt_iic_drv->api->init();
             if (ret_val == RET_OK)
             {
-                g_driver_initialized = TRUE;
+                g_iic_drv_ready = TRUE;
             }
         }
     }
