@@ -1,6 +1,6 @@
 #include "mp_iic.h"
 
-#include "../mp_common.h"
+#include "mp_common.h"
 #include "main.h"
 #include "su_common.h"
 
