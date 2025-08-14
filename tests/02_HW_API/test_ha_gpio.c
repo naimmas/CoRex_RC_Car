@@ -1,3 +1,5 @@
+#ifdef TEST
+
 #include "ha_gpio.h"
 #include "mock_mp_gpio.h"
 #include "su_common.h"
@@ -207,3 +209,5 @@ void test_gpio_get_with_invalid_state(void)
 
     TEST_ASSERT_EQUAL(RET_ERROR, ha_gpio_get(GP_PIN_LED, &pin_val));
 }
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef TEST
+
 #include "mock_main.h"
 #include "mock_stm32f4xx_hal_uart.h"
 #include "mp_uart.h"
@@ -181,3 +183,5 @@ void test_uart_read_with_valid_parameters_should_return_ok(void)
         TEST_ASSERT_EQUAL(RET_OK, g_uart_driver->api->receive(i, buffer, buffer_len, 0));
     }
 }
+
+#endif // TEST

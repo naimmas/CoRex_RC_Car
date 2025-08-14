@@ -1,3 +1,4 @@
+#ifdef TEST
 
 #include "mock_main.h"
 #include "mock_stm32f4xx_hal_i2c.h"
@@ -219,3 +220,4 @@ void test_iic_master_read_with_valid_parameters_should_return_ok(void)
     TEST_ASSERT_EQUAL(RET_OK, ret_val);
 }
 
+#endif // TEST

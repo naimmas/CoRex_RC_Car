@@ -1,3 +1,5 @@
+#ifdef TEST
+
 #include "ha_uart.h"
 #include "mock_mp_uart.h"
 #include "string.h"
@@ -111,3 +113,5 @@ void test_uart_read_success(void)
     TEST_ASSERT_EQUAL(RET_OK, ha_uart_receive(UART_PORT1, recv_buff, 20, 0));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("Hello from test\n", recv_buff, sizeof("Hello from test\n") - 1);
 }
+
+#endif // TEST

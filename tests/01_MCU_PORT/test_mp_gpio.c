@@ -1,3 +1,5 @@
+#ifdef TEST
+
 #include "mock_main.h"
 #include "mock_stm32f4xx_hal_gpio.h"
 #include "mp_gpio.h"
@@ -159,3 +161,5 @@ void test_gpio_toggle_with_valid_pin_index_should_return_ok(void)
         TEST_ASSERT_EQUAL(RET_OK, g_gpio_driver->api->toggle(i));
     }
 }
+
+#endif // TEST

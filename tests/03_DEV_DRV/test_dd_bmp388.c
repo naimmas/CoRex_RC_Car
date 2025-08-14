@@ -1,3 +1,4 @@
+#ifdef TEST
 
 #include "dd_bmp388.h"
 #include "dd_bmp388_defs.h"
@@ -521,3 +522,5 @@ void test_dd_bmp388_get_error_codes(void)
         TEST_ASSERT_EQUAL(error_codes[i].descriptor, dd_bmp388_get_error_state(baro_sens));
     }
 }
+
+#endif // TEST

@@ -1,4 +1,4 @@
-
+#ifdef TEST
 
 #include "unity.h"
 #include "mock_ha_iic.h"
@@ -33,3 +33,5 @@ void test_dd_qmi86_NeedToImplement(void)
 {
     TEST_IGNORE_MESSAGE("Need to Implement dd_qmi86");
 }
+
+#endif // TEST
