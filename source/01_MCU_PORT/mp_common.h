@@ -5,6 +5,14 @@
 #include "stm32f4xx_hal_def.h" //NOLINT(misc-header-include-cycle,misc-include-cleaner)
 #include "su_common.h"
 
+#define CRITICAL_ENTER() uint32_t prim = __get_PRIMASK(); __disable_irq();
+
+#define CRITICAL_EXIT() do { \
+    if (!prim) { \
+        __enable_irq(); \
+    } \
+} while (0)
+
 static inline response_status_t translate_hal_status(HAL_StatusTypeDef p_hal_ret)
 {
     response_status_t ret_val = RET_OK;
