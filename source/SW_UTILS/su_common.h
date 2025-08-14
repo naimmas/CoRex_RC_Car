@@ -27,6 +27,10 @@
 #define ARRAY_EQUAL_LENGTHS(a, b) \
     _Static_assert(ARRAY_SIZE(a) == ARRAY_SIZE(b), "Arrays must be same length")
 
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
+
 typedef enum
 {
     FALSE = 0x00,
@@ -45,6 +49,7 @@ typedef enum
     RET_NOT_SUPPORTED   = 0x10,
     RET_NOT_INITIALIZED = 0x20,
     RET_NOT_FOUND       = 0x40,
+    RET_NO_MEMORY       = 0x80,
 } response_status_t;
 
 typedef uint16_t timeout_t;
