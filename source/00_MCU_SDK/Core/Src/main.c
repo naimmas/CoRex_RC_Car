@@ -155,112 +155,6 @@ size_t get_ic_tim_ifcs(struct hal_capture_tim_ifc ** hw_tim_ifcs)
   return (ARRAY_SIZE(l_tim_ic_ifcs));
 }
 
-uint8_t uart_rx_buf[500] = {0};
-volatile uint8_t cnt = 0;
-uint32_t t0 = 0, elapsed = 0;
-
-void uart_rx_cb(UART_HandleTypeDef *huart)
-{
-  // Process the received data
-  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)"I received your data \n",
-                        sizeof("I received your data \n"));
-}
-
-void uart_tx_cb(UART_HandleTypeDef *huart)
-{
-
-  if (cnt == 0)
-  {
-    HAL_UART_Receive_DMA(&huart1, uart_rx_buf, sizeof("Hello from User\n"));
-  }
-  else
-  {
-    HAL_UART_DMAStop(&huart1);
-  }
-  cnt++;
-}
-void tim_elapsed(TIM_HandleTypeDef *htim)
-{
-  elapsed++;
-}
-
-volatile uint32_t ic_val_rising[2] = {0};
-volatile uint32_t ic_val_falling[2] = {0};
-volatile uint32_t pulse_width_us[2] = {0};
-volatile uint8_t waiting_for_falling[2] = {0};
-
-void tim3_ic_cb(TIM_HandleTypeDef *htim)
-{
-  const uint8_t idx = 0;
-
-  if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
-  {
-    if (waiting_for_falling[idx] == 0)
-    {
-      // Rising edge detected
-      ic_val_rising[idx] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-
-      // Switch to falling edge
-      __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,
-                                    TIM_INPUTCHANNELPOLARITY_FALLING);
-      waiting_for_falling[idx] = 1;
-    }
-    else
-    {
-      // Falling edge detected
-      ic_val_falling[idx] = HAL_TIM_ReadCapturedValue(htim,
-                                                      TIM_CHANNEL_1);
-
-      // Calculate pulse width (in µs)
-      if (ic_val_falling[idx] >= ic_val_rising[idx])
-        pulse_width_us[idx] = ic_val_falling[idx] - ic_val_rising[idx];
-      else
-        pulse_width_us[idx] = (htim->Instance->ARR - ic_val_rising[idx] + 1) + ic_val_falling[idx];
-
-      // Switch back to rising edge
-      __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,
-                                    TIM_INPUTCHANNELPOLARITY_RISING);
-      waiting_for_falling[idx] = 0;
-    }
-  }
-}
-
-void tim4_ic_cb(TIM_HandleTypeDef *htim)
-{
-  const uint8_t idx = 1;
-
-  if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
-  {
-    if (waiting_for_falling[idx] == 0)
-    {
-      // Rising edge detected
-      ic_val_rising[idx] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-
-      // Switch to falling edge
-      __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,
-                                    TIM_INPUTCHANNELPOLARITY_FALLING);
-      waiting_for_falling[idx] = 1;
-    }
-    else
-    {
-      // Falling edge detected
-      ic_val_falling[idx] = HAL_TIM_ReadCapturedValue(htim,
-                                                      TIM_CHANNEL_1);
-
-      // Calculate pulse width (in µs)
-      if (ic_val_falling[idx] >= ic_val_rising[idx])
-        pulse_width_us[idx] = ic_val_falling[idx] - ic_val_rising[idx];
-      else
-        pulse_width_us[idx] = (htim->Instance->ARR - ic_val_rising[idx] + 1) + ic_val_falling[idx];
-
-      // Switch back to rising edge
-      __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,
-                                    TIM_INPUTCHANNELPOLARITY_RISING);
-      waiting_for_falling[idx] = 0;
-    }
-  }
-}
-
 /* USER CODE END 0 */
 
 /**
@@ -301,20 +195,9 @@ int main(void)
   MX_TIM4_Init();
   MX_USART2_UART_Init();
   MX_USART6_UART_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_StatusTypeDef state = HAL_OK;
-
-  state |= HAL_UART_RegisterCallback(&huart1, HAL_UART_RX_COMPLETE_CB_ID,
-                                     uart_rx_cb);
-  state |= HAL_UART_RegisterCallback(&huart1, HAL_UART_TX_COMPLETE_CB_ID,
-                                     uart_tx_cb);
-  state |= HAL_UART_Transmit_DMA(&huart1,
-                                 (uint8_t *)"Hello from AviNav Core!\r\n", 25);
-//  HAL_TIM_RegisterCallback(&htim2, HAL_TIM_PERIOD_ELAPSED_CB_ID, tim_elapsed);
-//  HAL_TIM_Base_Start_IT(&htim2);
-    // HAL_TIM_IC_Start_IT()
-//  HAL_TIM_RegisterCallback(&htim2, HAL_TIM_PERIOD_ELAPSED_CB_ID, tim_elapsed);
   app();
   /* USER CODE END 2 */
 
