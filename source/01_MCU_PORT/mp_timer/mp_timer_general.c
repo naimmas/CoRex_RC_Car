@@ -1,7 +1,7 @@
 
 #include "mp_timer_general.h"
 
-#include "../mp_common.h"
+#include "mp_common.h"
 #include "main.h"
 #include "su_common.h"
 
@@ -47,7 +47,8 @@ static response_status_t init(void)
         g_timer_drv.sub_timers_periods[1] = g_timer_drv.hw_inst->Instance->CCR2;
         g_timer_drv.sub_timers_periods[2] = g_timer_drv.hw_inst->Instance->CCR3;
         g_timer_drv.sub_timers_periods[3] = g_timer_drv.hw_inst->Instance->CCR4;
-        ret_val                        = RET_OK;
+        // Start timer without interrupt to use its counter
+        ret_val = HAL_TIM_Base_Start(g_timer_drv.hw_inst);
     }
     else
     {
@@ -57,7 +58,7 @@ static response_status_t init(void)
     return ret_val;
 }
 
-static response_status_t start(uint8_t p_timer_id)
+static response_status_t start(mp_timer_id_t p_timer_id)
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_PARAM_ERROR);
@@ -85,7 +86,7 @@ static response_status_t start(uint8_t p_timer_id)
     return translate_hal_status(hal_ret);
 }
 
-static response_status_t stop(uint8_t p_timer_id)
+static response_status_t stop(mp_timer_id_t p_timer_id)
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_PARAM_ERROR);
@@ -106,20 +107,21 @@ static response_status_t stop(uint8_t p_timer_id)
         case MP_TIMER_100MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
 
-            break;
+        case MP_TIMER_CNT:
+        default:
             return RET_PARAM_ERROR;
     }
 
     return translate_hal_status(hal_ret);
 }
 
-static response_status_t register_callback(uint8_t p_timer_id, void (*callback)(void))
+static response_status_t register_callback(mp_timer_id_t p_timer_id, void (*callback)(void))
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(callback == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_NOT_SUPPORTED);
 
-    __disable_irq();
+    CRITICAL_ENTER();
     // If it's the first time we register a callback for this timer, we need to register the HAL
     // callback
     if (g_timer_drv.timers_user_cb[p_timer_id] == NULL)
@@ -129,7 +131,7 @@ static response_status_t register_callback(uint8_t p_timer_id, void (*callback)(
                                  hal_channel_tim_cb);
     }
     g_timer_drv.timers_user_cb[p_timer_id] = callback;
-    __enable_irq();
+    CRITICAL_EXIT();
     return RET_OK;
 }
 
@@ -165,15 +167,46 @@ static response_status_t get_state(void)
     return ret_val;
 }
 
-static struct st_timer_driver_ifc g_interface = {
-    .init              = init,
-    .start             = start,
-    .stop              = stop,
-    .register_callback = register_callback,
-    .get_state         = get_state,
-    .get_frequency     = NULL,
-    .hard_delay = HAL_Delay,
-};
+static void hard_delay(uint32_t p_delay, mp_timer_unit_t p_delay_unit)
+{
+    switch (p_delay_unit)
+    {
+        case MP_TIMER_UNIT_MS:
+            HAL_Delay(p_delay);
+            break;
+        case MP_TIMER_UNIT_US:
+            uint32_t t0 = __HAL_TIM_GET_COUNTER(g_timer_drv.hw_inst);
+            while ((__HAL_TIM_GET_COUNTER(g_timer_drv.hw_inst) - t0) < p_delay)
+            {
+                // Wait until the delay is reached
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+static uint32_t get_cpu_time(mp_timer_unit_t p_time_unit)
+{
+    switch (p_time_unit)
+    {
+        case MP_TIMER_UNIT_MS:
+            return HAL_GetTick();
+        case MP_TIMER_UNIT_US:
+            return __HAL_TIM_GET_COUNTER(g_timer_drv.hw_inst);
+        default:
+            return 0;
+    }
+}
+
+static struct st_timer_driver_ifc g_interface = { .init              = init,
+                                                  .start             = start,
+                                                  .stop              = stop,
+                                                  .register_callback = register_callback,
+                                                  .get_state         = get_state,
+                                                  .get_frequency     = NULL,
+                                                  .hard_delay        = hard_delay,
+                                                  .get_cpu_time      = get_cpu_time };
 
 timer_driver_t* timer_driver_register(void)
 {
