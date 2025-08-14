@@ -33,7 +33,8 @@ response_status_t ha_input_capture_init(void);
 response_status_t ha_input_capture_request_capture(input_capture_channel_t p_chnl,
                                                    input_capture_type_t    p_type,
                                                    input_capture_mode_t    p_capture_mode);
-response_status_t ha_input_capture_register_callback(input_capture_channel_t p_chnl, ic_finished_callback_t p_callback);
+response_status_t ha_input_capture_register_callback(input_capture_channel_t p_chnl,
+                                                     ic_finished_callback_t  p_callback);
 response_status_t ha_input_capture_abort(input_capture_channel_t p_chnl);
 
 #endif // HA_INPUT_CAPTURE_H

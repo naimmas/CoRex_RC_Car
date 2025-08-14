@@ -5,7 +5,7 @@
 #include "stddef.h"
 #include "su_common.h"
 
-static iic_driver g_pt_iic_drv          = NULL;
+static iic_driver g_pt_iic_drv    = NULL;
 static bool_t     g_iic_drv_ready = FALSE;
 
 /**
@@ -95,12 +95,12 @@ response_status_t ha_iic_master_mem_write(iic_comm_port_t p_port, uint8_t p_slav
     response_status_t ret_val = RET_OK;
 
     ret_val = g_pt_iic_drv->api->mem_write(p_port,
-                                          p_slave_addr,
-                                          p_mem_addr,
-                                          p_mem_size,
-                                          ppt_data_buffer,
-                                          p_data_size,
-                                          p_timeout_ms);
+                                           p_slave_addr,
+                                           p_mem_addr,
+                                           p_mem_size,
+                                           ppt_data_buffer,
+                                           p_data_size,
+                                           p_timeout_ms);
 
     return ret_val;
 }
@@ -134,12 +134,12 @@ response_status_t ha_iic_master_mem_read(iic_comm_port_t p_port, uint8_t p_slave
     response_status_t ret_val = RET_OK;
 
     ret_val = g_pt_iic_drv->api->mem_read(p_port,
-                                         p_slave_addr,
-                                         p_mem_addr,
-                                         p_mem_size,
-                                         ppt_data_buffer,
-                                         p_data_size,
-                                         p_timeout_ms);
+                                          p_slave_addr,
+                                          p_mem_addr,
+                                          p_mem_size,
+                                          ppt_data_buffer,
+                                          p_data_size,
+                                          p_timeout_ms);
 
     return ret_val;
 }
@@ -195,7 +195,7 @@ response_status_t ha_iic_init(void)
         else
         {
             g_pt_iic_drv->hw_inst_cnt = 0;
-            ret_val                  = g_pt_iic_drv->api->init();
+            ret_val                   = g_pt_iic_drv->api->init();
             if (ret_val == RET_OK)
             {
                 g_iic_drv_ready = TRUE;

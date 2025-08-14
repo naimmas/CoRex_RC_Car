@@ -6,7 +6,7 @@
 #include "stdint.h"
 #include "su_common.h"
 
-static gpio_driver g_pt_io_drv          = NULL;
+static gpio_driver g_pt_io_drv    = NULL;
 static bool_t      g_io_drv_ready = FALSE;
 
 /**
