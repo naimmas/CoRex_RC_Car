@@ -1,8 +1,8 @@
 
 #include "mp_timer_general.h"
 
-#include "mp_common.h"
 #include "main.h"
+#include "mp_common.h"
 #include "su_common.h"
 
 typedef struct st_stm32_timer_driver
@@ -48,7 +48,10 @@ static response_status_t init(void)
         g_timer_drv.sub_timers_periods[2] = g_timer_drv.hw_inst->Instance->CCR3;
         g_timer_drv.sub_timers_periods[3] = g_timer_drv.hw_inst->Instance->CCR4;
         // Start timer without interrupt to use its counter
-        ret_val = HAL_TIM_Base_Start(g_timer_drv.hw_inst);
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+        DWT->CYCCNT = 0;
+        DWT->CTRL  |= DWT_CTRL_CYCCNTENA_Msk;
+
     }
     else
     {
@@ -56,6 +59,40 @@ static response_status_t init(void)
     }
 
     return ret_val;
+}
+
+static inline HAL_StatusTypeDef OC_StartPeriodic(mp_timer_id_t p_timer_id, uint32_t ch)
+{
+    HAL_StatusTypeDef hal_ret = HAL_OK;
+    TIM_HandleTypeDef* htim = g_timer_drv.hw_inst;
+    // 1) Mask this channel's interrupt and clear any stale flags
+    uint32_t it_bit =
+        (ch == TIM_CHANNEL_1) ? TIM_IT_CC1 :
+        (ch == TIM_CHANNEL_2) ? TIM_IT_CC2 :
+        (ch == TIM_CHANNEL_3) ? TIM_IT_CC3 : TIM_IT_CC4;
+
+    __HAL_TIM_DISABLE_IT(htim, it_bit);
+    __HAL_TIM_CLEAR_IT(htim, it_bit);
+
+    // Optional but nice: clear any pending NVIC for this timer
+    // NVIC_ClearPendingIRQ(TIM2_IRQn); // use correct IRQn for your timer
+
+    // 2) Program the first compare **relative to now** so it's in the future
+    uint32_t first = __HAL_TIM_GET_COUNTER(htim) + g_timer_drv.sub_timers_periods[p_timer_id];
+    __HAL_TIM_SET_COMPARE(htim, ch, first);
+
+    // // Edge case: if very tight, push it further to avoid immediate match
+    // // (use signed diff to handle wrap)
+    int32_t delta = (int32_t)(__HAL_TIM_GET_COMPARE(htim, ch) - __HAL_TIM_GET_COUNTER(htim));
+    if (delta <= 2) {  // a couple of ticks margin
+        __HAL_TIM_SET_COMPARE(htim, ch, __HAL_TIM_GET_COMPARE(htim, ch) + 10);
+    }
+
+    // 3) Enable channel output-compare (no output) and then its interrupt
+    hal_ret = HAL_TIM_OC_Start(htim, ch);         // enables CCxE; does NOT set CCxIE
+    __HAL_TIM_ENABLE_IT(htim, it_bit);  // enable IRQ **after** CCR is set
+
+    return hal_ret;
 }
 
 static response_status_t start(mp_timer_id_t p_timer_id)
@@ -68,16 +105,16 @@ static response_status_t start(mp_timer_id_t p_timer_id)
     switch (p_timer_id)
     {
         case MP_TIMER_10US_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_1);
+            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_1);
             break;
         case MP_TIMER_1MS_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_2);
+            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_2);
             break;
         case MP_TIMER_10MS_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_3);
+            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_3);
             break;
         case MP_TIMER_100MS_ID:
-            hal_ret = HAL_TIM_OC_Start_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
+            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_4);
             break;
         default:
             return RET_PARAM_ERROR;
@@ -97,15 +134,19 @@ static response_status_t stop(mp_timer_id_t p_timer_id)
     {
         case MP_TIMER_10US_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_1);
+            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC1);
             break;
-        case MP_TIMER_1MS_ID:
+            case MP_TIMER_1MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_2);
+            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC2);
             break;
-        case MP_TIMER_10MS_ID:
+            case MP_TIMER_10MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_3);
+            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC3);
             break;
-        case MP_TIMER_100MS_ID:
+            case MP_TIMER_100MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
+            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC4);
 
         case MP_TIMER_CNT:
         default:
@@ -167,6 +208,19 @@ static response_status_t get_state(void)
     return ret_val;
 }
 
+static uint32_t get_cpu_time(mp_timer_unit_t p_time_unit)
+{
+    switch (p_time_unit)
+    {
+        case MP_TIMER_UNIT_MS:
+            return HAL_GetTick();
+        case MP_TIMER_UNIT_US:
+            return (uint32_t)(DWT->CYCCNT / 80u);
+        default:
+            return 0;
+    }
+}
+
 static void hard_delay(uint32_t p_delay, mp_timer_unit_t p_delay_unit)
 {
     switch (p_delay_unit)
@@ -175,27 +229,11 @@ static void hard_delay(uint32_t p_delay, mp_timer_unit_t p_delay_unit)
             HAL_Delay(p_delay);
             break;
         case MP_TIMER_UNIT_US:
-            uint32_t t0 = __HAL_TIM_GET_COUNTER(g_timer_drv.hw_inst);
-            while ((__HAL_TIM_GET_COUNTER(g_timer_drv.hw_inst) - t0) < p_delay)
-            {
-                // Wait until the delay is reached
-            }
+            uint32_t t0 =get_cpu_time(MP_TIMER_UNIT_US);
+            while ((uint32_t)(get_cpu_time(MP_TIMER_UNIT_US) - t0) < p_delay) { __NOP(); }
             break;
         default:
             break;
-    }
-}
-
-static uint32_t get_cpu_time(mp_timer_unit_t p_time_unit)
-{
-    switch (p_time_unit)
-    {
-        case MP_TIMER_UNIT_MS:
-            return HAL_GetTick();
-        case MP_TIMER_UNIT_US:
-            return __HAL_TIM_GET_COUNTER(g_timer_drv.hw_inst);
-        default:
-            return 0;
     }
 }
 
