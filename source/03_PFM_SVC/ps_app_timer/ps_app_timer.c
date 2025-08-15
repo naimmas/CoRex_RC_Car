@@ -21,10 +21,10 @@ typedef struct
     int8_t               id; // Unique timer ID
 } app_timer_t;
 
-static app_timer_t       g_app_timer[MAX_USER_TIMER]    = { 0 };
-static volatile uint32_t g_active_timers_msk[TIMER_CNT] = { 0 };
+static app_timer_t       g_app_timer[MAX_USER_TIMER]      = { 0 };
+static volatile uint32_t g_active_timers_msk[TIMER_CNT]   = { 0 };
 static volatile uint32_t g_timer_process_queue[TIMER_CNT] = { 0 };
-static bool_t            g_app_timer_initialized        = FALSE;
+static bool_t            g_app_timer_initialized          = FALSE;
 
 static response_status_t determine_timer_type_and_period(uint32_t         p_timer_period,
                                                          app_timer_unit_t p_time_unit,
@@ -143,7 +143,6 @@ response_status_t ps_app_timer_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    
     if (g_app_timer_initialized == FALSE)
     {
         memset(g_app_timer, 0, sizeof(g_app_timer));
@@ -208,28 +207,28 @@ void ps_app_timer_process(void)
     for (size_t i = 0; i < TIMER_CNT; i++)
     {
         uint32_t process_mask = g_timer_process_queue[i];
-        while(process_mask != 0)
+        while (process_mask != 0)
         {
             uint8_t      timer_id = __builtin_ctz(process_mask);
             app_timer_t* timer    = &g_app_timer[timer_id];
-            process_mask &= ~(1U << timer_id); // Clear the bit for this timer
+            process_mask         &= ~(1U << timer_id); // Clear the bit for this timer
 
             timer->user_timer_handler.is_fired = TRUE;
 
-        if (timer->one_shot == TRUE)
-        {
-            ps_app_timer_stop(&timer->user_timer_handler); // Stop the timer if it's one-shot
-        }
-        else
-        {
-            timer->counter = 0; // Reset counter for periodic timers
-        }
-        if (timer->callback != NULL)
-        {
-            timer->callback();
+            if (timer->one_shot == TRUE)
+            {
+                ps_app_timer_stop(&timer->user_timer_handler); // Stop the timer if it's one-shot
+            }
+            else
+            {
+                timer->counter = 0; // Reset counter for periodic timers
+            }
+            if (timer->callback != NULL)
+            {
+                timer->callback();
+            }
         }
     }
-}
 }
 
 response_status_t ps_app_timer_delete(app_timer_handler_t* p_timer_handler)

@@ -104,7 +104,7 @@ typedef enum en_debug_level
  ***************************************************************************************************/
 
 response_status_t ps_logger_init(void);
-void ps_logger_set_threshold(debug_level_t p_lvl);
+void              ps_logger_set_threshold(debug_level_t p_lvl);
 
 void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name, const char* ppt_msg,
                     float p_param_1, float p_param_2, float p_param_3);

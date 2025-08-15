@@ -1,7 +1,7 @@
 #include "mp_iic.h"
 
-#include "mp_common.h"
 #include "main.h"
+#include "mp_common.h"
 #include "su_common.h"
 
 typedef struct st_stm32_iic_driver

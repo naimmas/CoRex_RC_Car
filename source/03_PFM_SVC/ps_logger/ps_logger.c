@@ -5,9 +5,9 @@
 #include "ps_logger.h"
 
 #include "serial_ifc.h"
-#include "su_string/su_string.h"
-#include "su_common.h"
 #include "string.h"
+#include "su_common.h"
+#include "su_string/su_string.h"
 /***************************************************************************************************
  * Macro definitions.
  ***************************************************************************************************/
@@ -50,7 +50,7 @@
  ***************************************************************************************************/
 
 static char          g_debug_msg[LOGGER_MSG_MAX_LENGTH] = { '\0' };
-static debug_level_t g_debug_thld                 = DBG_LVL_DEBUG;
+static debug_level_t g_debug_thld                       = DBG_LVL_DEBUG;
 
 /***************************************************************************************************
  * Local function definitions.
@@ -227,7 +227,7 @@ response_status_t ps_logger_init(void)
         LOG_INFO("logger is ready\n");
     }
 #endif /* LOGGER_ENABLED */
-return ret_val;
+    return ret_val;
 }
 
 /**
@@ -286,6 +286,6 @@ void ps_logger_send(debug_level_t p_lvl, const char* ppt_func_name, const char* 
             add_log_prefix(p_lvl, ppt_func_name, &bytes_written);
             process_message(ppt_msg, &bytes_written, (float*)p_params_list);
         }
-    serial_ifc_send((const uint8_t*)g_debug_msg, bytes_written);
+        serial_ifc_send((const uint8_t*)g_debug_msg, bytes_written);
     }
 }

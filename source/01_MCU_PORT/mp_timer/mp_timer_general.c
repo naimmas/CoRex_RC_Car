@@ -49,9 +49,8 @@ static response_status_t init(void)
         g_timer_drv.sub_timers_periods[3] = g_timer_drv.hw_inst->Instance->CCR4;
         // Start timer without interrupt to use its counter
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-        DWT->CYCCNT = 0;
-        DWT->CTRL  |= DWT_CTRL_CYCCNTENA_Msk;
-
+        DWT->CYCCNT       = 0;
+        DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;
     }
     else
     {
@@ -63,13 +62,13 @@ static response_status_t init(void)
 
 static inline HAL_StatusTypeDef OC_StartPeriodic(mp_timer_id_t p_timer_id, uint32_t ch)
 {
-    HAL_StatusTypeDef hal_ret = HAL_OK;
-    TIM_HandleTypeDef* htim = g_timer_drv.hw_inst;
+    HAL_StatusTypeDef  hal_ret = HAL_OK;
+    TIM_HandleTypeDef* htim    = g_timer_drv.hw_inst;
     // 1) Mask this channel's interrupt and clear any stale flags
-    uint32_t it_bit =
-        (ch == TIM_CHANNEL_1) ? TIM_IT_CC1 :
-        (ch == TIM_CHANNEL_2) ? TIM_IT_CC2 :
-        (ch == TIM_CHANNEL_3) ? TIM_IT_CC3 : TIM_IT_CC4;
+    uint32_t it_bit = (ch == TIM_CHANNEL_1)   ? TIM_IT_CC1
+                      : (ch == TIM_CHANNEL_2) ? TIM_IT_CC2
+                      : (ch == TIM_CHANNEL_3) ? TIM_IT_CC3
+                                              : TIM_IT_CC4;
 
     __HAL_TIM_DISABLE_IT(htim, it_bit);
     __HAL_TIM_CLEAR_IT(htim, it_bit);
@@ -84,13 +83,14 @@ static inline HAL_StatusTypeDef OC_StartPeriodic(mp_timer_id_t p_timer_id, uint3
     // // Edge case: if very tight, push it further to avoid immediate match
     // // (use signed diff to handle wrap)
     int32_t delta = (int32_t)(__HAL_TIM_GET_COMPARE(htim, ch) - __HAL_TIM_GET_COUNTER(htim));
-    if (delta <= 2) {  // a couple of ticks margin
+    if (delta <= 2)
+    { // a couple of ticks margin
         __HAL_TIM_SET_COMPARE(htim, ch, __HAL_TIM_GET_COMPARE(htim, ch) + 10);
     }
 
     // 3) Enable channel output-compare (no output) and then its interrupt
-    hal_ret = HAL_TIM_OC_Start(htim, ch);         // enables CCxE; does NOT set CCxIE
-    __HAL_TIM_ENABLE_IT(htim, it_bit);  // enable IRQ **after** CCR is set
+    hal_ret = HAL_TIM_OC_Start(htim, ch); // enables CCxE; does NOT set CCxIE
+    __HAL_TIM_ENABLE_IT(htim, it_bit);    // enable IRQ **after** CCR is set
 
     return hal_ret;
 }
@@ -136,15 +136,15 @@ static response_status_t stop(mp_timer_id_t p_timer_id)
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_1);
             // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC1);
             break;
-            case MP_TIMER_1MS_ID:
+        case MP_TIMER_1MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_2);
             // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC2);
             break;
-            case MP_TIMER_10MS_ID:
+        case MP_TIMER_10MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_3);
             // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC3);
             break;
-            case MP_TIMER_100MS_ID:
+        case MP_TIMER_100MS_ID:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
             // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC4);
 
@@ -229,8 +229,11 @@ static void hard_delay(uint32_t p_delay, mp_timer_unit_t p_delay_unit)
             HAL_Delay(p_delay);
             break;
         case MP_TIMER_UNIT_US:
-            uint32_t t0 =get_cpu_time(MP_TIMER_UNIT_US);
-            while ((uint32_t)(get_cpu_time(MP_TIMER_UNIT_US) - t0) < p_delay) { __NOP(); }
+            uint32_t t0 = get_cpu_time(MP_TIMER_UNIT_US);
+            while ((uint32_t)(get_cpu_time(MP_TIMER_UNIT_US) - t0) < p_delay)
+            {
+                __NOP();
+            }
             break;
         default:
             break;

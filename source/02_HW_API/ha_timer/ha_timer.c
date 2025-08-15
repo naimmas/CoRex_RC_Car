@@ -11,7 +11,7 @@ response_status_t ha_timer_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    if (g_pt_timer_drv == NULL)
+    if (g_timer_drv_ready == FALSE)
     {
         g_pt_timer_drv = timer_driver_register();
         if (g_pt_timer_drv == NULL)
@@ -100,6 +100,7 @@ uint32_t ha_timer_get_cpu_time_ms(void)
     ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, 0);
     return g_pt_timer_drv->api->get_cpu_time(MP_TIMER_UNIT_MS);
 }
+
 uint32_t ha_timer_get_cpu_time_us(void)
 {
     ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, 0);

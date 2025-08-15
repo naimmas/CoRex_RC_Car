@@ -10,7 +10,7 @@ response_status_t ha_input_capture_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    if (g_pt_ic_drv == NULL)
+    if (g_ic_drv_ready == FALSE)
     {
         g_pt_ic_drv = timer_capture_driver_register();
         if (g_pt_ic_drv == NULL)

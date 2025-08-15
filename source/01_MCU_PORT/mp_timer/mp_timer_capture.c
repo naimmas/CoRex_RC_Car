@@ -1,7 +1,7 @@
 #include "mp_timer_capture.h"
 
-#include "mp_common.h"
 #include "main.h"
+#include "mp_common.h"
 #include "string.h"
 #include "su_common.h"
 
@@ -397,7 +397,7 @@ static struct st_ic_driver_ifc g_interface = {
     .capture_pulse     = req_pulse_capture,
     .capture_frequency = NULL,
     .register_callback = register_callback,
-    .get_data          = get_data,    
+    .get_data          = get_data,
     .stop_capture      = stop_capture,
 };
 

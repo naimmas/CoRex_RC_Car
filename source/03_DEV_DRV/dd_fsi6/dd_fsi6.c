@@ -94,7 +94,7 @@ response_status_t dd_fsi6_read_input(fsi6_inputs_t input, uint32_t* value)
     g_fsi6_dev.timeout_occurred     = FALSE;
     input_capture_channel_t channel = in2ch(input);
 
-    ret_val = ps_app_timer_start(g_fsi6_dev.timeout_handler, 50, APP_TIMER_UNIT_MS);
+    ret_val = ps_app_timer_start(g_fsi6_dev.timeout_handler, 40, APP_TIMER_UNIT_MS);
     if (ret_val == RET_OK)
     {
         ret_val =
@@ -103,8 +103,7 @@ response_status_t dd_fsi6_read_input(fsi6_inputs_t input, uint32_t* value)
 
     while (g_fsi6_dev.waiting_for_data && !g_fsi6_dev.timeout_occurred)
     {
-        // Wait for the callback to be called or timeout to occur
-        ha_timer_hard_delay_ms(10); // Polling delay
+        ;
     }
 
     if (g_fsi6_dev.timeout_occurred)

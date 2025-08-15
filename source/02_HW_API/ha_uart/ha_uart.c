@@ -60,7 +60,8 @@ response_status_t ha_uart_receive(uart_comm_port_t p_port, uint8_t* ppt_data_buf
     return ret_val;
 }
 
-response_status_t ha_uart_dma_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer, size_t p_data_size)
+response_status_t ha_uart_dma_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
+                                       size_t p_data_size)
 {
     ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);

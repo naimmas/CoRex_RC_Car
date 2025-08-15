@@ -1,9 +1,9 @@
 #include "mp_uart.h"
 
+#include "dma/priv_dma_uart.h"
+#include "main.h"
 #include "mp_common.h"
 #include "su_common.h"
-#include "main.h"
-#include "dma/priv_dma_uart.h"
 
 typedef struct st_stm32_uart_driver
 {
@@ -42,8 +42,8 @@ static response_status_t init(void)
     return ret_val;
 }
 
-static response_status_t read(mp_uart_ifc_idx_t p_ifc_index, uint8_t* ppt_buffer, size_t p_buffer_sz,
-                              timeout_t p_timeout_ms)
+static response_status_t read(mp_uart_ifc_idx_t p_ifc_index, uint8_t* ppt_buffer,
+                              size_t p_buffer_sz, timeout_t p_timeout_ms)
 {
     ASSERT_AND_RETURN(g_uart_drv.hw_insts == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_ifc_index >= g_uart_drv.base.hw_inst_cnt, RET_NOT_SUPPORTED);
@@ -60,22 +60,24 @@ static response_status_t read(mp_uart_ifc_idx_t p_ifc_index, uint8_t* ppt_buffer
     return ret_val;
 }
 
-static response_status_t write(mp_uart_ifc_idx_t p_ifc_index, uint8_t* ppt_buffer, size_t p_buffer_sz,
-                               timeout_t p_timeout_ms)
+static response_status_t write(mp_uart_ifc_idx_t p_ifc_index, uint8_t* ppt_buffer,
+                               size_t p_buffer_sz, timeout_t p_timeout_ms)
 {
 
     ASSERT_AND_RETURN(g_uart_drv.hw_insts == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_ifc_index >= g_uart_drv.base.hw_inst_cnt, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(ppt_buffer == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_buffer_sz == 0, RET_PARAM_ERROR);
-    
+
     response_status_t ret_val = RET_OK;
 
     if (dma_tx_in_progress(p_ifc_index) == FALSE)
-    {    
-        HAL_StatusTypeDef hal_ret =
-        HAL_UART_Transmit(g_uart_drv.hw_insts[p_ifc_index], ppt_buffer, p_buffer_sz, p_timeout_ms);
-        
+    {
+        HAL_StatusTypeDef hal_ret = HAL_UART_Transmit(g_uart_drv.hw_insts[p_ifc_index],
+                                                      ppt_buffer,
+                                                      p_buffer_sz,
+                                                      p_timeout_ms);
+
         ret_val = translate_hal_status(hal_ret);
     }
     else
@@ -86,14 +88,12 @@ static response_status_t write(mp_uart_ifc_idx_t p_ifc_index, uint8_t* ppt_buffe
     return ret_val;
 }
 
-static struct st_uart_driver_ifc g_interface = {
-    .init     = init,
-    .receive  = read,
-    .transmit = write,
-    .dma_register_cb = dma_tx_register_callback,
-    .dma_transmit_abort = dma_tx_abort,
-    .dma_transmit_request = dma_tx_start
-};
+static struct st_uart_driver_ifc g_interface = { .init                 = init,
+                                                 .receive              = read,
+                                                 .transmit             = write,
+                                                 .dma_register_cb      = dma_tx_register_callback,
+                                                 .dma_transmit_abort   = dma_tx_abort,
+                                                 .dma_transmit_request = dma_tx_start };
 
 uart_driver_t* uart_driver_register(void)
 {
