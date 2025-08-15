@@ -9,7 +9,8 @@ typedef struct st_uart_driver* uart_driver;
 
 typedef enum en_uart_comm_port
 {
-    UART_PORT1 = 0,
+    UART_DBG_PORT = 0,
+    UART_ESP32_PORT,
     UART_PORT_CNT,
 } uart_comm_port_t;
 
@@ -27,7 +28,8 @@ response_status_t ha_uart_receive(uart_comm_port_t p_port, uint8_t* ppt_data_buf
                                   size_t p_data_size, timeout_t p_timeout);
 response_status_t ha_uart_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
                                    size_t p_data_size, timeout_t p_timeout);
-response_status_t ha_uart_dma_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer, size_t p_data_size);
+response_status_t ha_uart_dma_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
+                                       size_t p_data_size);
 response_status_t ha_uart_dma_stop(uart_comm_port_t p_port);
 response_status_t ha_uart_dma_register_callback(uart_comm_port_t p_port, uart_dma_evt_cb p_evt_cb);
 

@@ -16,6 +16,7 @@ typedef struct st_uart_driver
 typedef enum
 {
     MP_UART_PORT1 = 0,
+    MP_UART_PORT2,
     MP_UART_PORT_CNT,
 } mp_uart_ifc_idx_t;
 
