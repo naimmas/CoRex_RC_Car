@@ -9,17 +9,6 @@
 #define CLEAR_ACTIVE_TIMER_MASK(timer_type, timer_id) \
     (g_active_timers_msk[timer_type] &= ~(1U << timer_id))
 
-#define WAIT_TIMER_UNLOCKED(timer) \
-    while (timer->locked) { /* Wait until the timer is unlocked */ }
-#define LOCK_TIMER(timer) \
-    do { \
-        timer->locked = TRUE; \
-    } while (0)
-#define UNLOCK_TIMER(timer) \
-    do { \
-        timer->locked = FALSE; \
-    } while (0)
-
 typedef struct
 {
     app_timer_handler_t  user_timer_handler;
@@ -34,6 +23,8 @@ typedef struct
 
 static app_timer_t       g_app_timer[MAX_USER_TIMER]    = { 0 };
 static volatile uint32_t g_active_timers_msk[TIMER_CNT] = { 0 };
+static volatile uint32_t g_timer_process_queue[TIMER_CNT] = { 0 };
+static bool_t            g_app_timer_initialized        = FALSE;
 
 static response_status_t determine_timer_type_and_period(uint32_t         p_timer_period,
                                                          app_timer_unit_t p_time_unit,
@@ -113,7 +104,7 @@ static int8_t find_free_timer(void)
     return -1; // No free timer found
 }
 
-static void dispatch_user_timer(gp_timers_t p_timer_type)
+static void inline dispatch_user_timer(gp_timers_t p_timer_type)
 {
     uint32_t active_mask = g_active_timers_msk[p_timer_type];
 
@@ -121,36 +112,16 @@ static void dispatch_user_timer(gp_timers_t p_timer_type)
     {
         uint8_t      timer_id = __builtin_ctz(active_mask);
         app_timer_t* timer    = &g_app_timer[timer_id];
-        if (timer->locked == TRUE) 
-        {
-            return;
-        }
-
-        LOCK_TIMER(timer);
         timer->counter++;
 
         if (timer->counter >= timer->period)
         {
-            timer->user_timer_handler.is_fired = TRUE;
-
-            if (timer->callback != NULL)
-            {
-                timer->callback();
-            }
-
-            if (timer->one_shot == TRUE)
-            {
-                ps_app_timer_stop(&timer->user_timer_handler); // Stop the timer if it's one-shot
-            }
-            else
-            {
-                timer->counter = 0; // Reset counter for periodic timers
-            }
+            BIT_SET(g_timer_process_queue[p_timer_type], timer_id);
         }
-        active_mask &= ~(1U << timer_id); // Clear the bit for this timer
-        UNLOCK_TIMER(timer);
+        BIT_CLR(active_mask, timer_id); // Clear the bit for this timer
     }
 }
+
 static void timer_10us_cb(void)
 {
     dispatch_user_timer(TIMER_10US);
@@ -172,30 +143,40 @@ response_status_t ps_app_timer_init(void)
 {
     response_status_t ret_val = RET_OK;
 
-    // Initialize the timer driver
-    ret_val = ha_timer_init();
-    if (ret_val == RET_OK)
+    
+    if (g_app_timer_initialized == FALSE)
     {
-        for (size_t i = 0; i < MAX_USER_TIMER; i++)
+        memset(g_app_timer, 0, sizeof(g_app_timer));
+        memset(g_active_timers_msk, 0, sizeof(g_active_timers_msk));
+        // Initialize the timer driver
+        ret_val = ha_timer_init();
+        if (ret_val == RET_OK)
         {
-            g_app_timer[i].user_timer_handler.is_running = FALSE;
-            g_app_timer[i].user_timer_handler.is_fired   = FALSE;
-            g_app_timer[i].id                      = -1; // Mark as unused
-            g_app_timer[i].period                  = 0;
-            g_app_timer[i].counter                 = 0;
+            for (size_t i = 0; i < MAX_USER_TIMER; i++)
+            {
+                g_app_timer[i].user_timer_handler.is_running = FALSE;
+                g_app_timer[i].user_timer_handler.is_fired   = FALSE;
+                g_app_timer[i].id                            = -1; // Mark as unused
+                g_app_timer[i].period                        = 0;
+                g_app_timer[i].counter                       = 0;
+            }
+            ret_val  = ha_timer_register_callback(TIMER_10US, timer_10us_cb);
+            ret_val |= ha_timer_register_callback(TIMER_1MS, timer_1ms_cb);
+            ret_val |= ha_timer_register_callback(TIMER_10MS, timer_10ms_cb);
+            ret_val |= ha_timer_register_callback(TIMER_100MS, timer_100ms_cb);
+            if (ret_val == RET_OK)
+            {
+                g_app_timer_initialized = TRUE;
+            }
         }
-        ret_val  = ha_timer_register_callback(TIMER_10US, timer_10us_cb);
-        ret_val |= ha_timer_register_callback(TIMER_1MS, timer_1ms_cb);
-        ret_val |= ha_timer_register_callback(TIMER_10MS, timer_10ms_cb);
-        ret_val |= ha_timer_register_callback(TIMER_100MS, timer_100ms_cb);
     }
-
     return ret_val;
 }
 
 response_status_t ps_app_timer_create(app_timer_handler_t** p_timer_handler, bool_t p_oneshot_timer,
                                       app_timer_callback_t p_callback)
 {
+    ASSERT_AND_RETURN(g_app_timer_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_handler == NULL, RET_PARAM_ERROR);
 
     response_status_t ret_val   = RET_OK;
@@ -206,9 +187,9 @@ response_status_t ps_app_timer_create(app_timer_handler_t** p_timer_handler, boo
         timer                                = &g_app_timer[timer_idx];
         timer->one_shot                      = p_oneshot_timer;
         timer->callback                      = p_callback;
-        timer->id                      = timer_idx;
-        timer->counter                 = 0;
-        timer->period                  = 0;
+        timer->id                            = timer_idx;
+        timer->counter                       = 0;
+        timer->period                        = 0;
         timer->user_timer_handler.is_running = FALSE;
         timer->user_timer_handler.is_fired   = FALSE;
         *p_timer_handler                     = &timer->user_timer_handler;
@@ -222,8 +203,38 @@ response_status_t ps_app_timer_create(app_timer_handler_t** p_timer_handler, boo
     return ret_val;
 }
 
+void ps_app_timer_process(void)
+{
+    for (size_t i = 0; i < TIMER_CNT; i++)
+    {
+        uint32_t process_mask = g_timer_process_queue[i];
+        while(process_mask != 0)
+        {
+            uint8_t      timer_id = __builtin_ctz(process_mask);
+            app_timer_t* timer    = &g_app_timer[timer_id];
+            process_mask &= ~(1U << timer_id); // Clear the bit for this timer
+
+            timer->user_timer_handler.is_fired = TRUE;
+
+        if (timer->one_shot == TRUE)
+        {
+            ps_app_timer_stop(&timer->user_timer_handler); // Stop the timer if it's one-shot
+        }
+        else
+        {
+            timer->counter = 0; // Reset counter for periodic timers
+        }
+        if (timer->callback != NULL)
+        {
+            timer->callback();
+        }
+    }
+}
+}
+
 response_status_t ps_app_timer_delete(app_timer_handler_t* p_timer_handler)
 {
+    ASSERT_AND_RETURN(g_app_timer_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_handler == NULL, RET_PARAM_ERROR);
     response_status_t ret_val = RET_OK;
     app_timer_t*      timer   = (app_timer_t*)p_timer_handler;
@@ -233,7 +244,7 @@ response_status_t ps_app_timer_delete(app_timer_handler_t* p_timer_handler)
     if (ret_val == RET_OK)
     {
         memset(timer, 0, sizeof(app_timer_t)); // Reset the timer structure
-        timer->id = -1;                  // Mark as unused
+        timer->id = -1;                        // Mark as unused
     }
 
     return ret_val;
@@ -242,6 +253,7 @@ response_status_t ps_app_timer_delete(app_timer_handler_t* p_timer_handler)
 response_status_t ps_app_timer_start(app_timer_handler_t* p_timer_handler, uint32_t p_timer_period,
                                      app_timer_unit_t p_time_unit)
 {
+    ASSERT_AND_RETURN(g_app_timer_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_handler == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timer_period > MAX_TIMER_PERIOD, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(((app_timer_t*)p_timer_handler)->id == -1, RET_NOT_INITIALIZED);
@@ -272,10 +284,10 @@ response_status_t ps_app_timer_start(app_timer_handler_t* p_timer_handler, uint3
 
     if (ret_val == RET_OK)
     {
-        timer->type                    = timer_type_to_use;
-        timer->period                  = period_to_use;
-        timer->user_timer_handler.is_fired   = FALSE;
-        timer->counter                 = 0;
+        timer->type                        = timer_type_to_use;
+        timer->period                      = period_to_use;
+        timer->user_timer_handler.is_fired = FALSE;
+        timer->counter                     = 0;
         SET_ACTIVE_TIMER_MASK(timer->type, timer->id);
         timer->user_timer_handler.is_running = TRUE;
     }
@@ -285,14 +297,13 @@ response_status_t ps_app_timer_start(app_timer_handler_t* p_timer_handler, uint3
 
 response_status_t ps_app_timer_stop(app_timer_handler_t* p_timer_handler)
 {
+    ASSERT_AND_RETURN(g_app_timer_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_handler == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(((app_timer_t*)p_timer_handler)->id == -1, RET_NOT_INITIALIZED);
 
     response_status_t ret_val = RET_OK;
     app_timer_t*      timer   = (app_timer_t*)p_timer_handler;
-    
-    WAIT_TIMER_UNLOCKED(timer);
-    LOCK_TIMER(timer);
+
     p_timer_handler->is_running = FALSE;
 
     CLEAR_ACTIVE_TIMER_MASK(timer->type, timer->id);
@@ -302,14 +313,14 @@ response_status_t ps_app_timer_stop(app_timer_handler_t* p_timer_handler)
     {
         ret_val = ha_timer_stop(timer->type);
     }
-    UNLOCK_TIMER(timer);
 
     return ret_val;
 }
 
-response_status_t ps_app_timer_update_period(app_timer_handler_t* p_timer_handler, uint32_t p_new_period,
-                                                  app_timer_unit_t p_time_unit)
+response_status_t ps_app_timer_update_period(app_timer_handler_t* p_timer_handler,
+                                             uint32_t p_new_period, app_timer_unit_t p_time_unit)
 {
+    ASSERT_AND_RETURN(g_app_timer_initialized == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer_handler == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(((app_timer_t*)p_timer_handler)->id == -1, RET_NOT_INITIALIZED);
 
@@ -332,8 +343,8 @@ response_status_t ps_app_timer_update_period(app_timer_handler_t* p_timer_handle
     {
         WAIT_TIMER_UNLOCKED(timer);
         LOCK_TIMER(timer);
-        timer->type   = timer_type_to_use;
-        timer->period = period_to_use;
+        timer->type    = timer_type_to_use;
+        timer->period  = period_to_use;
         timer->counter = 0; // Reset counter on period update
         UNLOCK_TIMER(timer);
     }
