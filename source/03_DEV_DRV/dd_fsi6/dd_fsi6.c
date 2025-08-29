@@ -43,7 +43,7 @@ void timeout_cb(void)
 
 void ic_api_cb(input_capture_channel_t channel, uint32_t value)
 {
-    if (g_fsi6_dev.initialized && g_fsi6_dev.waiting_for_data)
+    if (g_fsi6_dev.initialized)
     {
         g_fsi6_dev.value[g_fsi6_dev.channel_to_in[channel]] = value;
         g_fsi6_dev.waiting_for_data                         = FALSE;
@@ -54,7 +54,7 @@ void ic_api_cb(input_capture_channel_t channel, uint32_t value)
     }
 }
 
-response_status_t dd_fsi6_init(void)
+response_status_t dd_fsi6_init(bool_t p_isr)
 {
     response_status_t ret_val = RET_OK;
 
@@ -75,12 +75,35 @@ response_status_t dd_fsi6_init(void)
         ret_val |= ps_app_timer_create(&(g_fsi6_dev.timeout_handler), TRUE, timeout_cb);
     }
 
+    if (ret_val == RET_OK && p_isr)
+    {
+        for (int i = 0; i < FSI6_IN_CNT; i++)
+        {
+            input_capture_channel_t ch = in2ch(g_fsi6_dev.channel_to_in[i]);
+            ret_val |= ha_input_capture_request_capture(ch,
+                                                       IC_MEASURE_PULSE_WIDTH,
+                                                       IC_CONTINUOUS_CAPTURE);
+        }
+    }
+
     if (ret_val == RET_OK)
     {
         g_fsi6_dev.initialized = TRUE;
     }
 
     return ret_val;
+}
+
+response_status_t dd_fsi6_get_data(fsi6_inputs_t input, uint32_t* value)
+{
+    ASSERT_AND_RETURN(value == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(g_fsi6_dev.initialized == FALSE, RET_NOT_INITIALIZED);
+    ASSERT_AND_RETURN(input >= FSI6_IN_CNT, RET_PARAM_ERROR);
+
+    *value = g_fsi6_dev.value[input];
+
+    return RET_OK;
+
 }
 
 response_status_t dd_fsi6_read_input(fsi6_inputs_t input, uint32_t* value)
