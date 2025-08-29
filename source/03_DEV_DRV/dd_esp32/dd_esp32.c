@@ -4,6 +4,7 @@
 #include "ha_uart/ha_uart.h"
 #include "string.h"
 #include "su_common.h"
+#include "stdio.h"
 
 #define USER_DATA_SIZE (sizeof(dd_esp32_data_packet_t)/sizeof(uint8_t))
 
