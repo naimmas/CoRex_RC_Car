@@ -4,7 +4,7 @@ TOOLS_DIR := $(shell pwd)/tools
 TESTS_DIR := $(shell pwd)/tests
 SRC_DIR := $(shell pwd)/source
 LOGS_DIR := $(shell pwd)/build/logs
-BUILD_DIR := $(shell pwd)/build/source/$(MCU)/$(BUILD_TYPE)
+BUILD_DIR := $(shell pwd)/build/source/$(BUILD_TYPE)
 
 IGNORE_FILE = .makeignore
 IGNORES_LIST := $(shell awk 'NF && $$1 !~ /^\#/' $(IGNORE_FILE))
@@ -37,7 +37,7 @@ include $(TOOLS_DIR)/clang-format/make_format.mk
 # Search for the Docker executable instead of hardcoding in order to
 # prevent docker not found error when running in docker container
 CONTAINER ?= $(shell which docker)
-IMAGE_NAME := naimmas/embedded-dev-img:latest
+IMAGE_NAME := naimmas/embedded-dev-img:arm
 CONTAINER_NAME := arm-embedded-dev
 USER_NAME = $(shell whoami)
 NEED_IMAGE = $(shell $(CONTAINER) image inspect $(IMAGE_NAME) 2> /dev/null > /dev/null || echo build-image)
