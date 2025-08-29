@@ -1,138 +1,101 @@
-#include "dd_bmp388/dd_bmp388.h"
-#include "dd_qmi86/dd_qmi86.h"
+#include "baro.h"
+#include "dd_esp32/dd_esp32.h"
+#include "dd_fsi6/dd_fsi6.h"
+#include "dd_status_led/dd_status_led.h"
+#include "imu.h"
+#include "ps_app_timer/ps_app_timer.h"
 #include "ps_iic_bus_scanner/ps_iic_bus_scanner.h"
 #include "ps_logger/ps_logger.h"
-#include "ps_timer/ps_timer.h"
-#include "stdio.h"
-#include "string.h"
-qmi86_dev_t*      pt_imu    = NULL;
+
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#define CHECK_APP_ERR(ret_val) \
+    if (ret_val != RET_OK) { \
+        app_err_handler(); \
+    }
+#define CHECK_APP_ERR_LOG(ret_val, msg) \
+    if (ret_val != RET_OK) { \
+        LOG_ERR(msg); \
+        app_err_handler(); \
+    }
+
+app_timer_handler_t* g_esp32_msg_timer = NULL;
+
+int32_t MAP(int32_t au32_IN, int32_t au32_INmin, int32_t au32_INmax, int32_t au32_OUTmin,
+            int32_t au32_OUTmax)
+{
+    return ((((au32_IN - au32_INmin) * (au32_OUTmax - au32_OUTmin)) / (au32_INmax - au32_INmin))
+            + au32_OUTmin);
+}
+
+void app_err_handler(void)
+{
+    dd_status_led_error();
+    while (1)
+        ;
+}
+
 int app(void)
 {
-    bmp388_dev_t*     pt_baro   = NULL;
-    response_status_t ret_val   = RET_OK;
-    bmp388_status_t   bmp_ret   = BMP388_NO_ERROR;
+    response_status_t ret_val = RET_OK;
 
-    qmi86_st_result   st_result = QMI86_ST_RESULT_FAILED;
-    char              buffer[500U];
+    ret_val = ps_logger_init();
+    CHECK_APP_ERR(ret_val);
 
-    ps_logger_init();
     ps_bus_scanner_init();
     ps_scan_iic_bus();
-    ps_hard_delay_ms(100);
+    ps_app_timer_init();
 
-    // ret_val = dd_bmp388_init(&pt_baro, BMP388_DEV_1);
-    // if (ret_val != RET_OK)
-    // {
-    //     LOG_ERR("BMP388 initialization failed.\n");
-    //     return -1;
-    // }
+    ret_val = ps_app_timer_create(&g_esp32_msg_timer, TRUE, NULL);
+    CHECK_APP_ERR_LOG(ret_val, "Error creating ESP32 message timer\n");
 
-    // LOG_INFO("BMP388 successfully initialized.\n");
+    ret_val = dd_status_led_init();
+    CHECK_APP_ERR_LOG(ret_val, "Error initializing Status LED\n");
 
-    // pt_baro->settings.data_settings.iir_filter        = BMP388_IIR_COEFF_15;
-    // pt_baro->settings.data_settings.output_data_rate  = BMP388_ODR_25_HZ;
-    // pt_baro->settings.data_settings.temp_oversampling =
-    // BMP388_OVERSAMPLING_2X;
-    // pt_baro->settings.data_settings.press_oversampling =
-    //   BMP388_OVERSAMPLING_16X;
-    // pt_baro->settings.dev_settings.power_mode    = BMP388_POWER_MODE_NORMAL;
-    // pt_baro->settings.dev_settings.sensor_enable = BMP388_SENS_ENABLE_ALL;
-    // pt_baro->settings.int_settings.int_enable    = BMP388_INT_DISABLE_ALL;
+    ret_val = dd_esp32_init();
+    CHECK_APP_ERR_LOG(ret_val, "Error initializing ESP32\n");
 
-    // ret_val  = dd_bmp388_set_data_settings(pt_baro);
-    // ret_val |= dd_bmp388_set_dev_settings(pt_baro);
-    // ret_val |= dd_bmp388_set_interrupt_settings(pt_baro);
-    // bmp_ret  = dd_bmp388_get_error_state(pt_baro);
+    ret_val = dd_fsi6_init(TRUE);
+    CHECK_APP_ERR_LOG(ret_val, "Error initializing FSI6\n");
 
-    // if (ret_val != RET_OK || bmp_ret != BMP388_NO_ERROR)
-    // {
-    //     LOG_ERR("BMP388 settings update failed.\n");
-    //     return -1;
-    // }
+    ret_val = imu_init();
+    CHECK_APP_ERR_LOG(ret_val, "Error initializing IMU\n");
 
-    // LOG_INFO("BMP388 settings successfully updated.\n");
+    ret_val = baro_init();
+    CHECK_APP_ERR_LOG(ret_val, "Error initializing Baro\n");
 
-    ret_val = dd_qmi86_init(&pt_imu, QMI86_DEV_1);
-    if (ret_val != RET_OK)
-    {
-        LOG_ERR("QMI8656 initialization failed.\n");
-        return -1;
-    }
+    dd_esp32_data_packet_t data_msg = { 0 };
+    bool_t                 send_msg = FALSE;
 
-    ret_val = dd_qmi86_reset_device(pt_imu);
-    if (ret_val != RET_OK)
-    {
-        LOG_ERR("QMI8656 reset failed.\n");
-        return -1;
-    }
-
-    ret_val = dd_qmi86_init(&pt_imu, QMI86_DEV_1);
-    if (ret_val != RET_OK)
-    {
-        LOG_ERR("QMI8656 initialization failed.\n");
-        return -1;
-    }
-    LOG_INFO_P3("QMI Chip Id = %x %x %x\n",
-                pt_imu->chip_id.u8_arr[0],
-                pt_imu->chip_id.u8_arr[1],
-                pt_imu->chip_id.u8_arr[2]);
-    LOG_INFO_P3("QMI Firmware ver = %x %x %x\n",
-                pt_imu->chip_fw_version.u8_arr[0],
-                pt_imu->chip_fw_version.u8_arr[1],
-                pt_imu->chip_fw_version.u8_arr[2]);
-
-    pt_imu->settings.data_settings.acc_fsr     = QMI86_ACC_FSR_4G;
-    pt_imu->settings.data_settings.acc_odr     = QMI86_ACC_ODR_250_HZ;
-    pt_imu->settings.data_settings.gyro_fsr    = QMI86_GYRO_FSR_512DPS;
-    pt_imu->settings.data_settings.gyro_odr    = QMI86_GYRO_ODR_112P1_HZ;
-    pt_imu->settings.data_settings.acc_lpf_en  = FALSE;
-    pt_imu->settings.data_settings.gyro_lpf_en = FALSE;
-    ret_val = dd_qmi86_set_data_settings(pt_imu);
-
-    dd_qmi86_set_device_mode(pt_imu, QMI86_SENSOR_MODE_ACC_GYRO);
-
-    LOG_INFO("Starting Gyro Self Test\n");
-    st_result = dd_qmi86_perform_self_test(pt_imu, QMI86_SENSOR_GYRO);
-    LOG_INFO_P1("GYRO Self Test Result: %d\n", st_result);
-
-    LOG_INFO("Starting Accel Self Test");
-    st_result = dd_qmi86_perform_self_test(pt_imu, QMI86_SENSOR_ACCEL);
-    LOG_INFO_P1("Accel Self Test Result: %d\n", st_result);
-
-    LOG_INFO("Starting Gyro HW Calibration\n");
-    union gyro_calib_result clib_result = { 0x00 };
-    ret_val = dd_qmi86_calibrate_gyro(pt_imu, &clib_result);
-    LOG_INFO_P1("Gyro Calibration Result: %d\n", ret_val);
-
+    ps_app_timer_start(g_esp32_msg_timer, 50, APP_TIMER_UNIT_MS);
+    dd_status_led_normal();
     while (1)
     {
-        ret_val = dd_qmi86_poll_data(pt_imu);
-        // bmp_ret = dd_bmp388_get_data(pt_baro, BMP388_READ_PRESS_TEMP);
-        // if (bmp_ret == BMP388_NO_ERROR)
-        // {
-        //     snprintf(
-        //       buffer,
-        //       sizeof(buffer),
-        //       "Pressure: %.2f hPa - Health: %s, Temperature: %.2f C - Health:
-        //       "
-        //       "%s \n",
-        //       pt_baro->data.pressure,
-        //       pt_baro->data.pressure_health == BMP388_HEALTH_OK ? "OK" :
-        //       "ERR", pt_baro->data.temperature,
-        //       pt_baro->data.temperature_health == BMP388_HEALTH_OK ? "OK"
-        //                                                            : "ERR");
+        ret_val  = imu_get_data(&data_msg.acc[0].f,
+                               &data_msg.gyro[0].f,
+                               &data_msg.mag[0].f,
+                               &data_msg.quat[0].f);
+        ret_val |= baro_get_data(&data_msg.baro.f);
 
-        //     LOG_INFO(buffer);
-        // }
-        // else if (bmp_ret >= BMP388_WAITING_TEMP)
-        // {
-        //     LOG_INFO("Waiting data to be ready...\n");
-        // }
-        // else
-        // {
-        //     LOG_ERR("Error reading BMP388 data.\n");
-        // }
+        dd_fsi6_get_data(FSI6_IN_L_S_UD, &data_msg.throttle_stick);
+        dd_fsi6_get_data(FSI6_IN_R_S_LR, &data_msg.steering_stick);
 
-        //ps_hard_delay_ms(500);
+        if (ret_val == RET_OK && g_esp32_msg_timer->is_fired == TRUE)
+        {
+            g_esp32_msg_timer->is_fired = FALSE;
+            LOG_INFO("DATA OK\n");
+            ret_val = dd_esp32_send_data_packet(&data_msg);
+            if (ret_val != RET_OK)
+            {
+                LOG_ERR("Error sending data packet to ESP32\n");
+            }
+            ps_app_timer_start(g_esp32_msg_timer,
+                               50,
+                               APP_TIMER_UNIT_MS); // Restart timer for next message
+        }
     }
+
+    return 0;
 }
