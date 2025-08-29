@@ -2,6 +2,7 @@
 
 #include "dd_bmp388.h"
 #include "dd_bmp388_defs.h"
+#include "mock_ha_timer.h"
 #include "mock_ha_iic.h"
 #include "unity.h"
 

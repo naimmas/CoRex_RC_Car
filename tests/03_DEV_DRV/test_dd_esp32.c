@@ -4,6 +4,8 @@
 #include "unity.h"
 
 #include "dd_esp32.h"
+#include "mock_ha_timer.h"
+#include "mock_ha_uart.h"
 
 void setUp(void)
 {

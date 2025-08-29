@@ -2,9 +2,12 @@
 
 #include "ha_uart.h"
 #include "mock_mp_uart.h"
+#include "mock_priv_dma_uart.h"
 #include "string.h"
 #include "su_common.h"
 #include "unity.h"
+
+#define PORT_TO_TEST UART_DBG_PORT
 
 static response_status_t drv_init(void);
 static response_status_t drv_write(uint8_t, uint8_t*, size_t, timeout_t);
@@ -49,8 +52,8 @@ void test_uart_when_driver_not_registered_should_return_error(void)
     uart_driver_register_ExpectAndReturn(NULL);
 
     TEST_ASSERT_EQUAL(RET_ERROR, ha_uart_init());
-    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_receive(UART_PORT1, NULL, 0, 0));
-    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_transmit(UART_PORT1, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_receive(PORT_TO_TEST, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_transmit(PORT_TO_TEST, NULL, 0, 0));
 }
 
 void test_uart_when_driver_registeration_fails_should_return_error(void)
@@ -58,14 +61,14 @@ void test_uart_when_driver_registeration_fails_should_return_error(void)
     func_ret_val = RET_ERROR;
     uart_driver_register_ExpectAndReturn(&fake_uart_driver);
     TEST_ASSERT_EQUAL(RET_ERROR, ha_uart_init());
-    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_receive(UART_PORT1, NULL, 0, 0));
-    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_transmit(UART_PORT1, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_receive(PORT_TO_TEST, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_transmit(PORT_TO_TEST, NULL, 0, 0));
 
     func_ret_val = RET_NOT_SUPPORTED;
     uart_driver_register_ExpectAndReturn(&fake_uart_driver);
     TEST_ASSERT_EQUAL(RET_NOT_SUPPORTED, ha_uart_init());
-    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_receive(UART_PORT1, NULL, 0, 0));
-    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_transmit(UART_PORT1, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_receive(PORT_TO_TEST, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_NOT_INITIALIZED, ha_uart_transmit(PORT_TO_TEST, NULL, 0, 0));
     func_ret_val = RET_OK;
 }
 
@@ -85,32 +88,32 @@ void test_uart_port_not_supported(void)
 void test_uart_when_msg_buffer_is_null(void)
 {
 
-    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_receive(UART_PORT1, NULL, 0, 0));
-    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_transmit(UART_PORT1, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_receive(PORT_TO_TEST, NULL, 0, 0));
+    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_transmit(PORT_TO_TEST, NULL, 0, 0));
 }
 
 void test_uart_when_msg_buffer_size_is_zero(void)
 {
     uint8_t data_buffer[] = "Hello from test\n";
 
-    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_receive(UART_PORT1, data_buffer, 0, 0));
-    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_transmit(UART_PORT1, data_buffer, 0, 0));
+    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_receive(PORT_TO_TEST, data_buffer, 0, 0));
+    TEST_ASSERT_EQUAL(RET_PARAM_ERROR, ha_uart_transmit(PORT_TO_TEST, data_buffer, 0, 0));
 }
 
 void test_uart_write_success(void)
 {
     uint8_t data_buffer[] = "Hello from test\n";
 
-    TEST_ASSERT_EQUAL(RET_OK, ha_uart_transmit(UART_PORT1, data_buffer, sizeof(data_buffer), 0));
-    TEST_ASSERT_EQUAL_CHAR_ARRAY("Hello from test\n", uart_tx_buf[UART_PORT1], sizeof("Hello from test\n"));
+    TEST_ASSERT_EQUAL(RET_OK, ha_uart_transmit(PORT_TO_TEST, data_buffer, sizeof(data_buffer), 0));
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("Hello from test\n", uart_tx_buf[PORT_TO_TEST], sizeof("Hello from test\n"));
 }
 
 void test_uart_read_success(void)
 {
     uint8_t recv_buff[20] = { 0 };
-    memcpy(uart_rx_buf[UART_PORT1], "Hello from test\n1234", sizeof("Hello from test\n1234"));
+    memcpy(uart_rx_buf[PORT_TO_TEST], "Hello from test\n1234", sizeof("Hello from test\n1234"));
 
-    TEST_ASSERT_EQUAL(RET_OK, ha_uart_receive(UART_PORT1, recv_buff, 20, 0));
+    TEST_ASSERT_EQUAL(RET_OK, ha_uart_receive(PORT_TO_TEST, recv_buff, 20, 0));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("Hello from test\n", recv_buff, sizeof("Hello from test\n") - 1);
 }
 

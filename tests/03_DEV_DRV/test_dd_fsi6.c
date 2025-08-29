@@ -4,6 +4,9 @@
 #include "unity.h"
 
 #include "dd_fsi6.h"
+#include "mock_ha_input_capture.h"
+#include "mock_ha_timer.h"
+#include "mock_ps_app_timer.h"
 
 void setUp(void)
 {

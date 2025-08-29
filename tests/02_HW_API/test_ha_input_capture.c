@@ -4,6 +4,7 @@
 #include "unity.h"
 
 #include "ha_input_capture.h"
+#include "mock_mp_timer_capture.h"
 
 void setUp(void)
 {

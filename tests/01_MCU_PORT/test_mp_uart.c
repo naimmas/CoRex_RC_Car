@@ -2,6 +2,7 @@
 
 #include "mock_main.h"
 #include "mock_stm32f4xx_hal_uart.h"
+#include "priv_dma_uart.h"
 #include "mp_uart.h"
 #include "su_common.h"
 #include "unity.h"
