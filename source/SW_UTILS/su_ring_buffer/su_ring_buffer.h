@@ -43,6 +43,7 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+#define SU_RB_DISABLE_ATOMIC
     /**
      * \defgroup        LWRB Lightweight ring buffer manager
      * \brief           Lightweight ring buffer manager
