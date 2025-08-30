@@ -4,7 +4,7 @@
 
 #include "su_common.h"
 
-void              serial_ifc_send(const uint8_t* data, size_t len);
+void              serial_ifc_send(const uint8_t* ppt_data, size_t p_len);
 response_status_t serial_ifc_init(void);
 
 #endif // PS_LOGGER_SERIAL_IFC_H

@@ -22,12 +22,12 @@ typedef struct
 } app_timer_handler_t;
 
 response_status_t ps_app_timer_init(void);
-response_status_t ps_app_timer_create(app_timer_handler_t** p_timer_handler, bool_t p_oneshot_timer,
-                                      app_timer_callback_t p_callback);
-response_status_t ps_app_timer_delete(app_timer_handler_t* p_timer_handler);
-response_status_t ps_app_timer_start(app_timer_handler_t* p_timer_handler, uint32_t p_timer_period,
+response_status_t ps_app_timer_create(app_timer_handler_t** ppt_timer_handler, bool_t p_oneshot_timer,
+                                      app_timer_callback_t ppt_callback);
+response_status_t ps_app_timer_delete(app_timer_handler_t* ppt_timer_handler);
+response_status_t ps_app_timer_start(app_timer_handler_t* ppt_timer_handler, uint32_t p_timer_period,
                                      app_timer_unit_t p_time_unit);
-response_status_t ps_app_timer_stop(app_timer_handler_t* p_timer_handler);
-response_status_t ps_app_timer_update_period(app_timer_handler_t* p_timer_handler,
+response_status_t ps_app_timer_stop(app_timer_handler_t* ppt_timer_handler);
+response_status_t ps_app_timer_update_period(app_timer_handler_t* ppt_timer_handler,
                                              uint32_t p_new_period, app_timer_unit_t p_time_unit);
 #endif // PS_APP_TIMER_H
