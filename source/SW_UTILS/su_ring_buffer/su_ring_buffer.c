@@ -66,18 +66,18 @@
  *                      Maximum number of bytes buffer can hold is `size - 1`
  * \return          `1` on success, `0` otherwise
  */
-uint8_t su_rb_init(su_rb_t* buff, void* buffdata, su_rb_sz_t size)
+uint8_t su_rb_init(su_rb_t* ppt_buff, void* ppt_buffdata, su_rb_sz_t p_size)
 {
-    if (buff == NULL || buffdata == NULL || size == 0)
+    if (ppt_buff == NULL || ppt_buffdata == NULL || p_size == 0)
     {
         return 0;
     }
 
-    buff->evt_fn = NULL;
-    buff->size   = size;
-    buff->buff   = buffdata;
-    SU_RB_INIT(buff->w_ptr, 0);
-    SU_RB_INIT(buff->r_ptr, 0);
+    ppt_buff->evt_fn = NULL;
+    ppt_buff->size   = p_size;
+    ppt_buff->buff   = ppt_buffdata;
+    SU_RB_INIT(ppt_buff->w_ptr, 0);
+    SU_RB_INIT(ppt_buff->r_ptr, 0);
     return 1;
 }
 
@@ -86,9 +86,9 @@ uint8_t su_rb_init(su_rb_t* buff, void* buffdata, su_rb_sz_t size)
  * \param[in]       buff: Ring buffer instance
  * \return          `1` if ready, `0` otherwise
  */
-uint8_t su_rb_is_ready(su_rb_t* buff)
+uint8_t su_rb_is_ready(su_rb_t* ppt_buff)
 {
-    return BUF_IS_VALID(buff);
+    return BUF_IS_VALID(ppt_buff);
 }
 
 /**
@@ -97,11 +97,11 @@ uint8_t su_rb_is_ready(su_rb_t* buff)
  *                  it just sets buffer handle to `NULL`
  * \param[in]       buff: Ring buffer instance
  */
-void su_rb_free(su_rb_t* buff)
+void su_rb_free(su_rb_t* ppt_buff)
 {
-    if (BUF_IS_VALID(buff))
+    if (BUF_IS_VALID(ppt_buff))
     {
-        buff->buff = NULL;
+        ppt_buff->buff = NULL;
     }
 }
 
@@ -110,11 +110,11 @@ void su_rb_free(su_rb_t* buff)
  * \param[in]       buff: Ring buffer instance
  * \param[in]       evt_fn: Callback function
  */
-void su_rb_set_evt_fn(su_rb_t* buff, su_rb_evt_fn evt_fn)
+void su_rb_set_evt_fn(su_rb_t* ppt_buff, su_rb_evt_fn ppt_evt_fn)
 {
-    if (BUF_IS_VALID(buff))
+    if (BUF_IS_VALID(ppt_buff))
     {
-        buff->evt_fn = evt_fn;
+        ppt_buff->evt_fn = ppt_evt_fn;
     }
 }
 
@@ -123,11 +123,11 @@ void su_rb_set_evt_fn(su_rb_t* buff, su_rb_evt_fn evt_fn)
  * \param[in]       buff: Ring buffer instance
  * \param[in]       arg: Custom user argument
  */
-void su_rb_set_arg(su_rb_t* buff, void* arg)
+void su_rb_set_arg(su_rb_t* ppt_buff, void* ppt_arg)
 {
-    if (BUF_IS_VALID(buff))
+    if (BUF_IS_VALID(ppt_buff))
     {
-        buff->arg = arg;
+        ppt_buff->arg = ppt_arg;
     }
 }
 
@@ -136,9 +136,9 @@ void su_rb_set_arg(su_rb_t* buff, void* arg)
  * \param[in]       buff: Ring buffer instance
  * \return          User argument, previously set with \ref su_rb_set_arg
  */
-void* su_rb_get_arg(su_rb_t* buff)
+void* su_rb_get_arg(su_rb_t* ppt_buff)
 {
-    return buff != NULL ? buff->arg : NULL;
+    return ppt_buff != NULL ? ppt_buff->arg : NULL;
 }
 
 /**
@@ -159,11 +159,11 @@ void* su_rb_get_arg(su_rb_t* buff)
  *                      When returned value is less than `btw`, there was no enough memory available
  *                      to copy full data array.
  */
-su_rb_sz_t su_rb_write(su_rb_t* buff, const void* data, su_rb_sz_t btw)
+su_rb_sz_t su_rb_write(su_rb_t* ppt_buff, const void* ppt_data, su_rb_sz_t p_btw)
 {
     su_rb_sz_t written = 0;
 
-    if (su_rb_write_ex(buff, data, btw, &written, 0))
+    if (su_rb_write_ex(ppt_buff, ppt_data, p_btw, &written, 0))
     {
         return written;
     }
@@ -182,43 +182,45 @@ su_rb_sz_t su_rb_write(su_rb_t* buff, const void* data, su_rb_sz_t btw)
  *                          Will early return if no memory available
  * \return          `1` if write operation OK, `0` otherwise
  */
-uint8_t su_rb_write_ex(su_rb_t* buff, const void* data, su_rb_sz_t btw, su_rb_sz_t* bwritten,
-                       uint16_t flags)
+uint8_t su_rb_write_ex(su_rb_t* ppt_buff, const void* ppt_data, su_rb_sz_t p_btw, su_rb_sz_t* ppt_bwritten,
+                       uint16_t p_flags)
 {
-    su_rb_sz_t     tocopy = 0, free = 0, w_ptr = 0;
-    const uint8_t* d_ptr = data;
+    su_rb_sz_t     tocopy = 0;
+    su_rb_sz_t     free = 0;
+    su_rb_sz_t     w_ptr = 0;
+    const uint8_t* pt_d_ptr = ppt_data;
 
-    if (!BUF_IS_VALID(buff) || data == NULL || btw == 0)
+    if (!BUF_IS_VALID(ppt_buff) || ppt_data == NULL || p_btw == 0)
     {
         return 0;
     }
 
     /* Calculate maximum number of bytes available to write */
-    free = su_rb_get_free(buff);
+    free = su_rb_get_free(ppt_buff);
     /* If no memory, or if user wants to write ALL data but no enough space, exit early */
-    if (free == 0 || (free < btw && (flags & SU_RB_FLAG_WRITE_ALL)))
+    if (free == 0 || (free < p_btw && (p_flags & SU_RB_FLAG_WRITE_ALL)))
     {
         return 0;
     }
-    btw   = BUF_MIN(free, btw);
-    w_ptr = SU_RB_LOAD(buff->w_ptr, memory_order_acquire);
+    p_btw   = BUF_MIN(free, p_btw);
+    w_ptr = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_acquire);
 
     /* Step 1: Write data to linear part of buffer */
-    tocopy = BUF_MIN(buff->size - w_ptr, btw);
-    BUF_MEMCPY(&buff->buff[w_ptr], d_ptr, tocopy);
-    d_ptr += tocopy;
+    tocopy = BUF_MIN(ppt_buff->size - w_ptr, p_btw);
+    BUF_MEMCPY(&ppt_buff->buff[w_ptr], pt_d_ptr, tocopy);
+    pt_d_ptr += tocopy;
     w_ptr += tocopy;
-    btw   -= tocopy;
+    p_btw   -= tocopy;
 
     /* Step 2: Write data to beginning of buffer (overflow part) */
-    if (btw > 0)
+    if (p_btw > 0)
     {
-        BUF_MEMCPY(buff->buff, d_ptr, btw);
-        w_ptr = btw;
+        BUF_MEMCPY(ppt_buff->buff, pt_d_ptr, p_btw);
+        w_ptr = p_btw;
     }
 
     /* Step 3: Check end of buffer */
-    if (w_ptr >= buff->size)
+    if (w_ptr >= ppt_buff->size)
     {
         w_ptr = 0;
     }
@@ -227,12 +229,12 @@ uint8_t su_rb_write_ex(su_rb_t* buff, const void* data, su_rb_sz_t btw, su_rb_sz
      * Write final value to the actual running variable.
      * This is to ensure no read operation can access intermediate data
      */
-    SU_RB_STORE(buff->w_ptr, w_ptr, memory_order_release);
+    SU_RB_STORE(ppt_buff->w_ptr, w_ptr, memory_order_release);
 
-    BUF_SEND_EVT(buff, SU_RB_EVT_WRITE, tocopy + btw);
-    if (bwritten != NULL)
+    BUF_SEND_EVT(ppt_buff, SU_RB_EVT_WRITE, tocopy + p_btw);
+    if (ppt_bwritten != NULL)
     {
-        *bwritten = tocopy + btw;
+        *ppt_bwritten = tocopy + p_btw;
     }
     return 1;
 }
@@ -251,11 +253,11 @@ uint8_t su_rb_write_ex(su_rb_t* buff, const void* data, su_rb_sz_t btw, su_rb_sz
  * \param[in]       btr: Number of bytes to read
  * \return          Number of bytes read and copied to data array
  */
-su_rb_sz_t su_rb_read(su_rb_t* buff, void* data, su_rb_sz_t btr)
+su_rb_sz_t su_rb_read(su_rb_t* ppt_buff, void* ppt_data, su_rb_sz_t p_btr)
 {
     su_rb_sz_t read = 0;
 
-    if (su_rb_read_ex(buff, data, btr, &read, 0))
+    if (su_rb_read_ex(ppt_buff, ppt_data, p_btr, &read, 0))
     {
         return read;
     }
@@ -275,41 +277,43 @@ su_rb_sz_t su_rb_read(su_rb_t* buff, void* data, su_rb_sz_t btr)
  *                          Will early return if no enough bytes in the buffer
  * \return          `1` if read operation OK, `0` otherwise
  */
-uint8_t su_rb_read_ex(su_rb_t* buff, void* data, su_rb_sz_t btr, su_rb_sz_t* bread, uint16_t flags)
+uint8_t su_rb_read_ex(su_rb_t* ppt_buff, void* ppt_data, su_rb_sz_t p_btr, su_rb_sz_t* ppt_bread, uint16_t p_flags)
 {
-    su_rb_sz_t tocopy = 0, full = 0, r_ptr = 0;
-    uint8_t*   d_ptr = data;
+    su_rb_sz_t tocopy = 0;
+    su_rb_sz_t full = 0;
+    su_rb_sz_t r_ptr = 0;
+    uint8_t*   pt_d_ptr = ppt_data;
 
-    if (!BUF_IS_VALID(buff) || data == NULL || btr == 0)
+    if (!BUF_IS_VALID(ppt_buff) || ppt_data == NULL || p_btr == 0)
     {
         return 0;
     }
 
     /* Calculate maximum number of bytes available to read */
-    full = su_rb_get_full(buff);
-    if (full == 0 || (full < btr && (flags & SU_RB_FLAG_READ_ALL)))
+    full = su_rb_get_full(ppt_buff);
+    if (full == 0 || (full < p_btr && (p_flags & SU_RB_FLAG_READ_ALL)))
     {
         return 0;
     }
-    btr   = BUF_MIN(full, btr);
-    r_ptr = SU_RB_LOAD(buff->r_ptr, memory_order_acquire);
+    p_btr   = BUF_MIN(full, p_btr);
+    r_ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_acquire);
 
     /* Step 1: Read data from linear part of buffer */
-    tocopy = BUF_MIN(buff->size - r_ptr, btr);
-    BUF_MEMCPY(d_ptr, &buff->buff[r_ptr], tocopy);
-    d_ptr += tocopy;
+    tocopy = BUF_MIN(ppt_buff->size - r_ptr, p_btr);
+    BUF_MEMCPY(pt_d_ptr, &ppt_buff->buff[r_ptr], tocopy);
+    pt_d_ptr += tocopy;
     r_ptr += tocopy;
-    btr   -= tocopy;
+    p_btr   -= tocopy;
 
     /* Step 2: Read data from beginning of buffer (overflow part) */
-    if (btr > 0)
+    if (p_btr > 0)
     {
-        BUF_MEMCPY(d_ptr, buff->buff, btr);
-        r_ptr = btr;
+        BUF_MEMCPY(pt_d_ptr, ppt_buff->buff, p_btr);
+        r_ptr = p_btr;
     }
 
     /* Step 3: Check end of buffer */
-    if (r_ptr >= buff->size)
+    if (r_ptr >= ppt_buff->size)
     {
         r_ptr = 0;
     }
@@ -318,12 +322,12 @@ uint8_t su_rb_read_ex(su_rb_t* buff, void* data, su_rb_sz_t btr, su_rb_sz_t* bre
      * Write final value to the actual running variable.
      * This is to ensure no write operation can access intermediate data
      */
-    SU_RB_STORE(buff->r_ptr, r_ptr, memory_order_release);
+    SU_RB_STORE(ppt_buff->r_ptr, r_ptr, memory_order_release);
 
-    BUF_SEND_EVT(buff, SU_RB_EVT_READ, tocopy + btr);
-    if (bread != NULL)
+    BUF_SEND_EVT(ppt_buff, SU_RB_EVT_READ, tocopy + p_btr);
+    if (ppt_bread != NULL)
     {
-        *bread = tocopy + btr;
+        *ppt_bread = tocopy + p_btr;
     }
     return 1;
 }
@@ -336,12 +340,14 @@ uint8_t su_rb_read_ex(su_rb_t* buff, void* data, su_rb_sz_t btr, su_rb_sz_t* bre
  * \param[in]       btp: Number of bytes to peek
  * \return          Number of bytes peeked and written to output array
  */
-su_rb_sz_t su_rb_peek(const su_rb_t* buff, su_rb_sz_t skip_count, void* data, su_rb_sz_t btp)
+su_rb_sz_t su_rb_peek(const su_rb_t* ppt_buff, su_rb_sz_t p_skip_count, void* ppt_data, su_rb_sz_t p_btp)
 {
-    su_rb_sz_t full = 0, tocopy = 0, r_ptr = 0;
-    uint8_t*   d_ptr = data;
+    su_rb_sz_t full = 0;
+    su_rb_sz_t tocopy = 0;
+    su_rb_sz_t r_ptr = 0;
+    uint8_t*   pt_d_ptr = ppt_data;
 
-    if (!BUF_IS_VALID(buff) || data == NULL || btp == 0)
+    if (!BUF_IS_VALID(ppt_buff) || ppt_data == NULL || p_btp == 0)
     {
         return 0;
     }
@@ -350,38 +356,38 @@ su_rb_sz_t su_rb_peek(const su_rb_t* buff, su_rb_sz_t skip_count, void* data, su
      * Calculate maximum number of bytes available to read
      * and check if we can even fit to it
      */
-    full = su_rb_get_full(buff);
-    if (skip_count >= full)
+    full = su_rb_get_full(ppt_buff);
+    if (p_skip_count >= full)
     {
         return 0;
     }
-    r_ptr  = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
-    r_ptr += skip_count;
-    full  -= skip_count;
-    if (r_ptr >= buff->size)
+    r_ptr  = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
+    r_ptr += p_skip_count;
+    full  -= p_skip_count;
+    if (r_ptr >= ppt_buff->size)
     {
-        r_ptr -= buff->size;
+        r_ptr -= ppt_buff->size;
     }
 
     /* Check maximum number of bytes available to read after skip */
-    btp = BUF_MIN(full, btp);
-    if (btp == 0)
+    p_btp = BUF_MIN(full, p_btp);
+    if (p_btp == 0)
     {
         return 0;
     }
 
     /* Step 1: Read data from linear part of buffer */
-    tocopy = BUF_MIN(buff->size - r_ptr, btp);
-    BUF_MEMCPY(d_ptr, &buff->buff[r_ptr], tocopy);
-    d_ptr += tocopy;
-    btp   -= tocopy;
+    tocopy = BUF_MIN(ppt_buff->size - r_ptr, p_btp);
+    BUF_MEMCPY(pt_d_ptr, &ppt_buff->buff[r_ptr], tocopy);
+    pt_d_ptr += tocopy;
+    p_btp   -= tocopy;
 
     /* Step 2: Read data from beginning of buffer (overflow part) */
-    if (btp > 0)
+    if (p_btp > 0)
     {
-        BUF_MEMCPY(d_ptr, buff->buff, btp);
+        BUF_MEMCPY(pt_d_ptr, ppt_buff->buff, p_btp);
     }
-    return tocopy + btp;
+    return tocopy + p_btp;
 }
 
 /**
@@ -389,11 +395,13 @@ su_rb_sz_t su_rb_peek(const su_rb_t* buff, su_rb_sz_t skip_count, void* data, su
  * \param[in]       buff: Ring buffer instance
  * \return          Number of free bytes in memory
  */
-su_rb_sz_t su_rb_get_free(const su_rb_t* buff)
+su_rb_sz_t su_rb_get_free(const su_rb_t* ppt_buff)
 {
-    su_rb_sz_t size = 0, w_ptr = 0, r_ptr = 0;
+    su_rb_sz_t size = 0;
+    su_rb_sz_t w_ptr = 0;
+    su_rb_sz_t r_ptr = 0;
 
-    if (!BUF_IS_VALID(buff))
+    if (!BUF_IS_VALID(ppt_buff))
     {
         return 0;
     }
@@ -418,12 +426,12 @@ su_rb_sz_t su_rb_get_free(const su_rb_t* buff)
      * problem, application can always try again to write more data to remaining free memory that
      * was read just during copy operation
      */
-    w_ptr = SU_RB_LOAD(buff->w_ptr, memory_order_relaxed);
-    r_ptr = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
+    w_ptr = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_relaxed);
+    r_ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
 
     if (w_ptr >= r_ptr)
     {
-        size = buff->size - (w_ptr - r_ptr);
+        size = ppt_buff->size - (w_ptr - r_ptr);
     }
     else
     {
@@ -439,11 +447,13 @@ su_rb_sz_t su_rb_get_free(const su_rb_t* buff)
  * \param[in]       buff: Ring buffer instance
  * \return          Number of bytes ready to be read
  */
-su_rb_sz_t su_rb_get_full(const su_rb_t* buff)
+su_rb_sz_t su_rb_get_full(const su_rb_t* ppt_buff)
 {
-    su_rb_sz_t size = 0, w_ptr = 0, r_ptr = 0;
+    su_rb_sz_t size = 0;
+    su_rb_sz_t w_ptr = 0;
+    su_rb_sz_t r_ptr = 0;
 
-    if (!BUF_IS_VALID(buff))
+    if (!BUF_IS_VALID(ppt_buff))
     {
         return 0;
     }
@@ -468,8 +478,8 @@ su_rb_sz_t su_rb_get_full(const su_rb_t* buff)
      * problem, application can always try again to read more data from remaining full memory that
      * was written just during copy operation
      */
-    w_ptr = SU_RB_LOAD(buff->w_ptr, memory_order_relaxed);
-    r_ptr = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
+    w_ptr = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_relaxed);
+    r_ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
 
     if (w_ptr >= r_ptr)
     {
@@ -477,7 +487,7 @@ su_rb_sz_t su_rb_get_full(const su_rb_t* buff)
     }
     else
     {
-        size = buff->size - (r_ptr - w_ptr);
+        size = ppt_buff->size - (r_ptr - w_ptr);
     }
     return size;
 }
@@ -488,13 +498,13 @@ su_rb_sz_t su_rb_get_full(const su_rb_t* buff)
  *                      When used, application must ensure there is no active read/write operation
  * \param[in]       buff: Ring buffer instance
  */
-void su_rb_reset(su_rb_t* buff)
+void su_rb_reset(su_rb_t* ppt_buff)
 {
-    if (BUF_IS_VALID(buff))
+    if (BUF_IS_VALID(ppt_buff))
     {
-        SU_RB_STORE(buff->w_ptr, 0, memory_order_release);
-        SU_RB_STORE(buff->r_ptr, 0, memory_order_release);
-        BUF_SEND_EVT(buff, SU_RB_EVT_RESET, 0);
+        SU_RB_STORE(ppt_buff->w_ptr, 0, memory_order_release);
+        SU_RB_STORE(ppt_buff->r_ptr, 0, memory_order_release);
+        BUF_SEND_EVT(ppt_buff, SU_RB_EVT_RESET, 0);
     }
 }
 
@@ -503,16 +513,16 @@ void su_rb_reset(su_rb_t* buff)
  * \param[in]       buff: Ring buffer instance
  * \return          Linear buffer start address
  */
-void* su_rb_get_linear_block_read_address(const su_rb_t* buff)
+void* su_rb_get_linear_block_read_address(const su_rb_t* ppt_buff)
 {
     su_rb_sz_t ptr = 0;
 
-    if (!BUF_IS_VALID(buff))
+    if (!BUF_IS_VALID(ppt_buff))
     {
         return NULL;
     }
-    ptr = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
-    return &buff->buff[ptr];
+    ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
+    return &ppt_buff->buff[ptr];
 }
 
 /**
@@ -520,11 +530,13 @@ void* su_rb_get_linear_block_read_address(const su_rb_t* buff)
  * \param[in]       buff: Ring buffer instance
  * \return          Linear buffer size in units of bytes for read operation
  */
-su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* buff)
+su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* ppt_buff)
 {
-    su_rb_sz_t len = 0, w_ptr = 0, r_ptr = 0;
+    su_rb_sz_t len = 0;
+    su_rb_sz_t w_ptr = 0;
+    su_rb_sz_t r_ptr = 0;
 
-    if (!BUF_IS_VALID(buff))
+    if (!BUF_IS_VALID(ppt_buff))
     {
         return 0;
     }
@@ -533,8 +545,8 @@ su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* buff)
      * Use temporary values in case they are changed during operations.
      * See su_rb_buff_free or su_rb_buff_full functions for more information why this is OK.
      */
-    w_ptr = SU_RB_LOAD(buff->w_ptr, memory_order_relaxed);
-    r_ptr = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
+    w_ptr = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_relaxed);
+    r_ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
 
     if (w_ptr > r_ptr)
     {
@@ -542,7 +554,7 @@ su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* buff)
     }
     else if (r_ptr > w_ptr)
     {
-        len = buff->size - r_ptr;
+        len = ppt_buff->size - r_ptr;
     }
     else
     {
@@ -560,26 +572,27 @@ su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* buff)
  * \param[in]       len: Number of bytes to skip and mark as read
  * \return          Number of bytes skipped
  */
-su_rb_sz_t su_rb_skip(su_rb_t* buff, su_rb_sz_t len)
+su_rb_sz_t su_rb_skip(su_rb_t* ppt_buff, su_rb_sz_t p_len)
 {
-    su_rb_sz_t full = 0, r_ptr = 0;
+    su_rb_sz_t full = 0;
+    su_rb_sz_t r_ptr = 0;
 
-    if (!BUF_IS_VALID(buff) || len == 0)
+    if (!BUF_IS_VALID(ppt_buff) || p_len == 0)
     {
         return 0;
     }
 
-    full   = su_rb_get_full(buff);
-    len    = BUF_MIN(len, full);
-    r_ptr  = SU_RB_LOAD(buff->r_ptr, memory_order_acquire);
-    r_ptr += len;
-    if (r_ptr >= buff->size)
+    full   = su_rb_get_full(ppt_buff);
+    p_len    = BUF_MIN(p_len, full);
+    r_ptr  = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_acquire);
+    r_ptr += p_len;
+    if (r_ptr >= ppt_buff->size)
     {
-        r_ptr -= buff->size;
+        r_ptr -= ppt_buff->size;
     }
-    SU_RB_STORE(buff->r_ptr, r_ptr, memory_order_release);
-    BUF_SEND_EVT(buff, SU_RB_EVT_READ, len);
-    return len;
+    SU_RB_STORE(ppt_buff->r_ptr, r_ptr, memory_order_release);
+    BUF_SEND_EVT(ppt_buff, SU_RB_EVT_READ, p_len);
+    return p_len;
 }
 
 /**
@@ -587,16 +600,16 @@ su_rb_sz_t su_rb_skip(su_rb_t* buff, su_rb_sz_t len)
  * \param[in]       buff: Ring buffer instance
  * \return          Linear buffer start address
  */
-void* su_rb_get_linear_block_write_address(const su_rb_t* buff)
+void* su_rb_get_linear_block_write_address(const su_rb_t* ppt_buff)
 {
     su_rb_sz_t ptr = 0;
 
-    if (!BUF_IS_VALID(buff))
+    if (!BUF_IS_VALID(ppt_buff))
     {
         return NULL;
     }
-    ptr = SU_RB_LOAD(buff->w_ptr, memory_order_relaxed);
-    return &buff->buff[ptr];
+    ptr = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_relaxed);
+    return &ppt_buff->buff[ptr];
 }
 
 /**
@@ -604,11 +617,13 @@ void* su_rb_get_linear_block_write_address(const su_rb_t* buff)
  * \param[in]       buff: Ring buffer instance
  * \return          Linear buffer size in units of bytes for write operation
  */
-su_rb_sz_t su_rb_get_linear_block_write_length(const su_rb_t* buff)
+su_rb_sz_t su_rb_get_linear_block_write_length(const su_rb_t* ppt_buff)
 {
-    su_rb_sz_t len = 0, w_ptr = 0, r_ptr = 0;
+    su_rb_sz_t len = 0;
+    su_rb_sz_t w_ptr = 0;
+    su_rb_sz_t r_ptr = 0;
 
-    if (!BUF_IS_VALID(buff))
+    if (!BUF_IS_VALID(ppt_buff))
     {
         return 0;
     }
@@ -617,12 +632,12 @@ su_rb_sz_t su_rb_get_linear_block_write_length(const su_rb_t* buff)
      * Use temporary values in case they are changed during operations.
      * See su_rb_buff_free or su_rb_buff_full functions for more information why this is OK.
      */
-    w_ptr = SU_RB_LOAD(buff->w_ptr, memory_order_relaxed);
-    r_ptr = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
+    w_ptr = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_relaxed);
+    r_ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
 
     if (w_ptr >= r_ptr)
     {
-        len = buff->size - w_ptr;
+        len = ppt_buff->size - w_ptr;
         /*
          * When read pointer is 0,
          * maximal length is one less as if too many bytes
@@ -655,27 +670,28 @@ su_rb_sz_t su_rb_get_linear_block_write_length(const su_rb_t* buff)
  * \param[in]       len: Number of bytes to advance
  * \return          Number of bytes advanced for write operation
  */
-su_rb_sz_t su_rb_advance(su_rb_t* buff, su_rb_sz_t len)
+su_rb_sz_t su_rb_advance(su_rb_t* ppt_buff, su_rb_sz_t p_len)
 {
-    su_rb_sz_t free = 0, w_ptr = 0;
+    su_rb_sz_t free = 0;
+    su_rb_sz_t w_ptr = 0;
 
-    if (!BUF_IS_VALID(buff) || len == 0)
+    if (!BUF_IS_VALID(ppt_buff) || p_len == 0)
     {
         return 0;
     }
 
     /* Use local variables before writing back to main structure */
-    free   = su_rb_get_free(buff);
-    len    = BUF_MIN(len, free);
-    w_ptr  = SU_RB_LOAD(buff->w_ptr, memory_order_acquire);
-    w_ptr += len;
-    if (w_ptr >= buff->size)
+    free   = su_rb_get_free(ppt_buff);
+    p_len    = BUF_MIN(p_len, free);
+    w_ptr  = SU_RB_LOAD(ppt_buff->w_ptr, memory_order_acquire);
+    w_ptr += p_len;
+    if (w_ptr >= ppt_buff->size)
     {
-        w_ptr -= buff->size;
+        w_ptr -= ppt_buff->size;
     }
-    SU_RB_STORE(buff->w_ptr, w_ptr, memory_order_release);
-    BUF_SEND_EVT(buff, SU_RB_EVT_WRITE, len);
-    return len;
+    SU_RB_STORE(ppt_buff->w_ptr, w_ptr, memory_order_release);
+    BUF_SEND_EVT(ppt_buff, SU_RB_EVT_WRITE, p_len);
+    return p_len;
 }
 
 /**
@@ -691,58 +707,61 @@ su_rb_sz_t su_rb_advance(su_rb_t* buff, su_rb_sz_t len)
  *                      Must not be set to `NULL`
  * \return          `1` if \arg bts found, `0` otherwise
  */
-uint8_t su_rb_find(const su_rb_t* buff, const void* bts, su_rb_sz_t len, su_rb_sz_t start_offset,
-                   su_rb_sz_t* found_idx)
+uint8_t su_rb_find(const su_rb_t* ppt_buff, const void* ppt_bts, su_rb_sz_t p_len, su_rb_sz_t p_start_offset,
+                   su_rb_sz_t* ppt_found_idx)
 {
-    su_rb_sz_t     full = 0, r_ptr = 0, buff_r_ptr = 0, max_x = 0;
+    su_rb_sz_t     full = 0;
+    su_rb_sz_t     r_ptr = 0;
+    su_rb_sz_t     buff_r_ptr = 0;
+    su_rb_sz_t     max_x = 0;
     uint8_t        found  = 0;
-    const uint8_t* needle = bts;
+    const uint8_t* pt_needle = ppt_bts;
 
-    if (!BUF_IS_VALID(buff) || needle == NULL || len == 0 || found_idx == NULL)
+    if (!BUF_IS_VALID(ppt_buff) || pt_needle == NULL || p_len == 0 || ppt_found_idx == NULL)
     {
         return 0;
     }
-    *found_idx = 0;
+    *ppt_found_idx = 0;
 
-    full = su_rb_get_full(buff);
+    full = su_rb_get_full(ppt_buff);
     /* Verify initial conditions */
-    if (full < (len + start_offset))
+    if (full < (p_len + p_start_offset))
     {
         return 0;
     }
 
     /* Get actual buffer read pointer for this search */
-    buff_r_ptr = SU_RB_LOAD(buff->r_ptr, memory_order_relaxed);
+    buff_r_ptr = SU_RB_LOAD(ppt_buff->r_ptr, memory_order_relaxed);
 
     /* Max number of for loops is buff_full - input_len - start_offset of buffer length */
-    max_x = full - len;
-    for (su_rb_sz_t skip_x = start_offset; !found && skip_x <= max_x; ++skip_x)
+    max_x = full - p_len;
+    for (su_rb_sz_t skip_x = p_start_offset; !found && skip_x <= max_x; ++skip_x)
     {
         found = 1; /* Found by default */
 
         /* Prepare the starting point for reading */
         r_ptr = buff_r_ptr + skip_x;
-        if (r_ptr >= buff->size)
+        if (r_ptr >= ppt_buff->size)
         {
-            r_ptr -= buff->size;
+            r_ptr -= ppt_buff->size;
         }
 
         /* Search in the buffer */
-        for (su_rb_sz_t idx = 0; idx < len; ++idx)
+        for (su_rb_sz_t idx = 0; idx < p_len; ++idx)
         {
-            if (buff->buff[r_ptr] != needle[idx])
+            if (ppt_buff->buff[r_ptr] != pt_needle[idx])
             {
                 found = 0;
                 break;
             }
-            if (++r_ptr >= buff->size)
+            if (++r_ptr >= ppt_buff->size)
             {
                 r_ptr = 0;
             }
         }
         if (found)
         {
-            *found_idx = skip_x;
+            *ppt_found_idx = skip_x;
         }
     }
     return found;

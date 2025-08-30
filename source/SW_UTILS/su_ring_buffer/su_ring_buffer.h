@@ -82,7 +82,7 @@ typedef uint32_t su_rb_sz_t;
     /**
      * \brief           Buffer structure forward declaration
      */
-    struct lwrb;
+    struct st_lwrb;
 
     /**
      * \brief           Event callback function type
@@ -90,7 +90,7 @@ typedef uint32_t su_rb_sz_t;
      * \param[in]       evt: Event type
      * \param[in]       bp: Number of bytes written or read (when used), depends on event type
      */
-    typedef void (*su_rb_evt_fn)(struct lwrb* buff, su_rb_evt_type_t evt, su_rb_sz_t bp);
+    typedef void (*su_rb_evt_fn)(struct st_lwrb* ppt_buff, su_rb_evt_type_t p_evt, su_rb_sz_t p_bp);
 
 /* List of flags */
 #define SU_RB_FLAG_READ_ALL  ((uint16_t)0x0001)
@@ -99,7 +99,7 @@ typedef uint32_t su_rb_sz_t;
     /**
      * \brief           Buffer structure
      */
-    typedef struct lwrb
+    typedef struct st_lwrb
     {
         uint8_t* buff; /*!< Pointer to buffer data. Buffer is considered initialized when `buff !=
                           NULL` and `size > 0` */
@@ -115,44 +115,44 @@ typedef uint32_t su_rb_sz_t;
         void*        arg;    /*!< Event custom user argument */
     } su_rb_t;
 
-    uint8_t su_rb_init(su_rb_t* buff, void* buffdata, su_rb_sz_t size);
-    uint8_t su_rb_is_ready(su_rb_t* buff);
-    void    su_rb_free(su_rb_t* buff);
-    void    su_rb_reset(su_rb_t* buff);
-    void    su_rb_set_evt_fn(su_rb_t* buff, su_rb_evt_fn fn);
-    void    su_rb_set_arg(su_rb_t* buff, void* arg);
-    void*   su_rb_get_arg(su_rb_t* buff);
+    uint8_t su_rb_init(su_rb_t* ppt_buff, void* ppt_buffdata, su_rb_sz_t p_size);
+    uint8_t su_rb_is_ready(su_rb_t* ppt_buff);
+    void    su_rb_free(su_rb_t* ppt_buff);
+    void    su_rb_reset(su_rb_t* ppt_buff);
+    void    su_rb_set_evt_fn(su_rb_t* ppt_buff, su_rb_evt_fn ppt_evt_fn);
+    void    su_rb_set_arg(su_rb_t* ppt_buff, void* ppt_arg);
+    void*   su_rb_get_arg(su_rb_t* ppt_buff);
 
     /* Read/Write functions */
-    su_rb_sz_t su_rb_write(su_rb_t* buff, const void* data, su_rb_sz_t btw);
-    su_rb_sz_t su_rb_read(su_rb_t* buff, void* data, su_rb_sz_t btr);
-    su_rb_sz_t su_rb_peek(const su_rb_t* buff, su_rb_sz_t skip_count, void* data, su_rb_sz_t btp);
+    su_rb_sz_t su_rb_write(su_rb_t* ppt_buff, const void* ppt_data, su_rb_sz_t p_btw);
+    su_rb_sz_t su_rb_read(su_rb_t* ppt_buff, void* ppt_data, su_rb_sz_t p_btr);
+    su_rb_sz_t su_rb_peek(const su_rb_t* ppt_buff, su_rb_sz_t p_skip_count, void* ppt_data, su_rb_sz_t p_btp);
 
     /* Extended read/write functions */
-    uint8_t su_rb_write_ex(su_rb_t* buff, const void* data, su_rb_sz_t btw, su_rb_sz_t* bwritten,
-                           uint16_t flags);
-    uint8_t su_rb_read_ex(su_rb_t* buff, void* data, su_rb_sz_t btr, su_rb_sz_t* bread,
-                          uint16_t flags);
+    uint8_t su_rb_write_ex(su_rb_t* ppt_buff, const void* ppt_data, su_rb_sz_t p_btw, su_rb_sz_t* ppt_bwritten,
+                           uint16_t p_flags);
+    uint8_t su_rb_read_ex(su_rb_t* ppt_buff, void* ppt_data, su_rb_sz_t p_btr, su_rb_sz_t* ppt_bread,
+                          uint16_t p_flags);
 
     /* Buffer size information */
-    su_rb_sz_t su_rb_get_free(const su_rb_t* buff);
-    su_rb_sz_t su_rb_get_full(const su_rb_t* buff);
+    su_rb_sz_t su_rb_get_free(const su_rb_t* ppt_buff);
+    su_rb_sz_t su_rb_get_full(const su_rb_t* ppt_buff);
 
     /* Read data block management */
-    void*      su_rb_get_linear_block_read_address(const su_rb_t* buff);
-    su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* buff);
-    su_rb_sz_t su_rb_skip(su_rb_t* buff, su_rb_sz_t len);
+    void*      su_rb_get_linear_block_read_address(const su_rb_t* ppt_buff);
+    su_rb_sz_t su_rb_get_linear_block_read_length(const su_rb_t* ppt_buff);
+    su_rb_sz_t su_rb_skip(su_rb_t* ppt_buff, su_rb_sz_t p_len);
 
     /* Write data block management */
-    void*      su_rb_get_linear_block_write_address(const su_rb_t* buff);
-    su_rb_sz_t su_rb_get_linear_block_write_length(const su_rb_t* buff);
-    su_rb_sz_t su_rb_advance(su_rb_t* buff, su_rb_sz_t len);
+    void*      su_rb_get_linear_block_write_address(const su_rb_t* ppt_buff);
+    su_rb_sz_t su_rb_get_linear_block_write_length(const su_rb_t* ppt_buff);
+    su_rb_sz_t su_rb_advance(su_rb_t* ppt_buff, su_rb_sz_t p_len);
 
     /* Search in buffer */
-    uint8_t    su_rb_find(const su_rb_t* buff, const void* bts, su_rb_sz_t len,
-                          su_rb_sz_t start_offset, su_rb_sz_t* found_idx);
-    su_rb_sz_t su_rb_overwrite(su_rb_t* buff, const void* data, su_rb_sz_t btw);
-    su_rb_sz_t su_rb_move(su_rb_t* dest, su_rb_t* src);
+    uint8_t    su_rb_find(const su_rb_t* ppt_buff, const void* ppt_bts, su_rb_sz_t p_len,
+                          su_rb_sz_t p_start_offset, su_rb_sz_t* ppt_found_idx);
+    su_rb_sz_t su_rb_overwrite(su_rb_t* ppt_buff, const void* ppt_data, su_rb_sz_t p_btw);
+    su_rb_sz_t su_rb_move(su_rb_t* ppt_dest, su_rb_t* ppt_src);
 
     /**
      * \}
