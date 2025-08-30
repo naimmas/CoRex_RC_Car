@@ -65,7 +65,7 @@ response_status_t dd_fsi6_init(bool_t p_isr)
     {
         for (int i = 0; i < FSI6_IN_CNT; i++)
         {
-            ret_val |= ha_input_capture_register_callback(g_fsi6_dev.channel_to_in[i], ic_api_cb);
+            ret_val |= ha_input_capture_register_callback(in2ch(i), ic_api_cb);
         }
     }
 
