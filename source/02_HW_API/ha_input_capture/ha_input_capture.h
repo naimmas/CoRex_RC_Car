@@ -28,14 +28,14 @@ typedef enum
     IC_ONE_SHOT_CAPTURE   = 1,
 } input_capture_mode_t;
 
-typedef void (*ic_finished_callback_t)(input_capture_channel_t channel, uint32_t value);
+typedef void (*ic_finished_callback_t)(input_capture_channel_t p_channel, uint32_t p_value);
 
 response_status_t ha_input_capture_init(void);
 response_status_t ha_input_capture_request_capture(input_capture_channel_t p_chnl,
                                                    input_capture_type_t    p_type,
                                                    input_capture_mode_t    p_capture_mode);
 response_status_t ha_input_capture_register_callback(input_capture_channel_t p_chnl,
-                                                     ic_finished_callback_t  p_callback);
+                                                     ic_finished_callback_t  ppt_callback);
 response_status_t ha_input_capture_abort(input_capture_channel_t p_chnl);
 
 #endif // HA_INPUT_CAPTURE_H

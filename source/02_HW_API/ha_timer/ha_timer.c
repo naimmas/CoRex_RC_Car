@@ -72,13 +72,13 @@ response_status_t ha_timer_get_frequency(gp_timers_t p_timer, uint32_t* ppt_freq
     return ret_val;
 }
 
-response_status_t ha_timer_register_callback(gp_timers_t p_timer, void (*callback)(void))
+response_status_t ha_timer_register_callback(gp_timers_t p_timer, void (*ppt_callback)(void))
 {
     ASSERT_AND_RETURN(g_timer_drv_ready != TRUE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_timer >= TIMER_CNT, RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(callback == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_callback == NULL, RET_PARAM_ERROR);
 
-    response_status_t ret_val = g_pt_timer_drv->api->register_callback((uint8_t)p_timer, callback);
+    response_status_t ret_val = g_pt_timer_drv->api->register_callback((uint8_t)p_timer, ppt_callback);
 
     return ret_val;
 }

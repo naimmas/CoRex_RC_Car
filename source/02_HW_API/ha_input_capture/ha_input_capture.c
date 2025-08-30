@@ -69,14 +69,14 @@ response_status_t ha_input_capture_abort(input_capture_channel_t p_chnl)
 }
 
 response_status_t ha_input_capture_register_callback(input_capture_channel_t p_chnl,
-                                                     ic_finished_callback_t  p_callback)
+                                                     ic_finished_callback_t  ppt_callback)
 {
     ASSERT_AND_RETURN(!g_ic_drv_ready, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_callback == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_callback == NULL, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_ic_drv->api->register_callback(p_chnl, p_callback);
+    ret_val = g_pt_ic_drv->api->register_callback(p_chnl, ppt_callback);
 
     return ret_val;
 }

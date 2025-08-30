@@ -31,6 +31,6 @@ response_status_t ha_uart_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_bu
 response_status_t ha_uart_dma_transmit(uart_comm_port_t p_port, uint8_t* ppt_data_buffer,
                                        size_t p_data_size);
 response_status_t ha_uart_dma_stop(uart_comm_port_t p_port);
-response_status_t ha_uart_dma_register_callback(uart_comm_port_t p_port, uart_dma_evt_cb p_evt_cb);
+response_status_t ha_uart_dma_register_callback(uart_comm_port_t p_port, uart_dma_evt_cb ppt_evt_cb);
 
 #endif /* HA_UART_H */

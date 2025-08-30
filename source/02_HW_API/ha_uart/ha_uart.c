@@ -87,14 +87,14 @@ response_status_t ha_uart_dma_stop(uart_comm_port_t p_port)
     return ret_val;
 }
 
-response_status_t ha_uart_dma_register_callback(uart_comm_port_t p_port, uart_dma_evt_cb p_evt_cb)
+response_status_t ha_uart_dma_register_callback(uart_comm_port_t p_port, uart_dma_evt_cb ppt_evt_cb)
 {
     ASSERT_AND_RETURN(g_uart_drv_ready == FALSE, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_port >= g_pt_uart_drv->hw_inst_cnt, RET_NOT_SUPPORTED);
 
     response_status_t ret_val = RET_OK;
 
-    ret_val = g_pt_uart_drv->api->dma_register_cb(p_port, (dma_tx_evt_cb)p_evt_cb);
+    ret_val = g_pt_uart_drv->api->dma_register_cb(p_port, (dma_tx_evt_cb)ppt_evt_cb);
 
     return ret_val;
 }

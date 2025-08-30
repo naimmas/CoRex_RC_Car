@@ -76,7 +76,7 @@ struct st_timer_driver_ifc
      *
      * @retval `RET_OK` if the callback is registered successfully, else error code.
      */
-    response_status_t (*register_callback)(mp_timer_id_t, void (*callback)(void));
+    response_status_t (*register_callback)(mp_timer_id_t, void (*ppt_callback)(void));
 
     /**
      * @brief This function shall provide a hard delay in milliseconds or microseconds.
