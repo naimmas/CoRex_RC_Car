@@ -12,11 +12,11 @@
 #include <string.h>
 
 #define CHECK_APP_ERR(ret_val) \
-    if (ret_val != RET_OK) { \
+    if ((ret_val) != RET_OK) { \
         app_err_handler(); \
     }
 #define CHECK_APP_ERR_LOG(ret_val, msg) \
-    if (ret_val != RET_OK) { \
+    if ((ret_val) != RET_OK) { \
         LOG_ERR(msg); \
         app_err_handler(); \
     }
