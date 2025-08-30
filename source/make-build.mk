@@ -3,7 +3,6 @@
 ############################### Native Makefile ###############################
 
 PROJECT_NAME ?= firmware
-RP_EXTRA ?= ON
 ASM_OUT ?= OFF
 
 PLATFORM = $(if $(OS),$(OS),$(shell uname -s))

@@ -59,7 +59,7 @@ build-image:
 	@echo "Container image $(IMAGE_NAME) built successfully."
 
 cont-build: $(NEED_IMAGE)
-	$(RUN_CONTAINER_CMD) "make build BUILD_TYPE=$(BUILD_TYPE) RP_EXTRA=$(RP_EXTRA)"
+	$(RUN_CONTAINER_CMD) "make build BUILD_TYPE=$(BUILD_TYPE)"
 
 cont-analyse: $(NEED_IMAGE)
 	$(RUN_CONTAINER_CMD) "make analyse TYPE=\"$(TYPE)\" BUILD_TYPE=$(BUILD_TYPE) CLT_FLAGS=$(CLT_FLAGS)"
