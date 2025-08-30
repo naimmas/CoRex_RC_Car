@@ -41,9 +41,8 @@ response_status_t ha_input_capture_request_capture(input_capture_channel_t p_chn
     switch (p_type)
     {
         case IC_CAPTURE_RISING_EDGE:
-            ret_val = g_pt_ic_drv->api->capture_edge(p_chnl, 1, p_capture_mode);
         case IC_CAPTURE_FALLING_EDGE:
-            ret_val = g_pt_ic_drv->api->capture_edge(p_chnl, 0, p_capture_mode);
+            ret_val = g_pt_ic_drv->api->capture_edge(p_chnl, p_type, p_capture_mode);
             break;
         case IC_MEASURE_PULSE_WIDTH:
             ret_val = g_pt_ic_drv->api->capture_pulse(p_chnl, p_capture_mode);

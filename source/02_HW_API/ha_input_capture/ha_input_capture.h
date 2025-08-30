@@ -19,6 +19,7 @@ typedef enum
     IC_CAPTURE_FALLING_EDGE,
     IC_MEASURE_PULSE_WIDTH,
     IC_MEASURE_FREQUENCY,
+    IC_CAPTURE_TYPE_CNT
 } input_capture_type_t;
 
 typedef enum

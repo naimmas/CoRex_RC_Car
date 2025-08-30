@@ -2,28 +2,15 @@
 #ifndef HA_INPUT_CAPTURE_PRIVATE_H
 #define HA_INPUT_CAPTURE_PRIVATE_H
 
+#include "ha_input_capture.h"
 #include "su_common.h"
 
 typedef struct st_ic_driver_ifc* ic_driver_ifc;
+typedef input_capture_channel_t mp_timer_capture_channels_t;
+typedef input_capture_type_t mp_timer_capture_type_t;
+typedef input_capture_mode_t mp_timer_capture_mode_t;
 
-typedef void (*timer_capture_callback_t)(uint8_t, uint32_t);
-
-typedef enum
-{
-    MP_TIMER_CAP_TYPE_RISING_EDGE = 0,
-    MP_TIMER_CAP_TYPE_FALLING_EDGE,
-    MP_TIMER_CAP_TYPE_PULSE_WIDTH,
-    MP_TIMER_CAP_TYPE_FREQUENCY,
-    MP_TIMER_CAP_TYPE_CNT
-} mp_timer_capture_type_t;
-
-typedef enum
-{
-    MP_TIMER_CAP_CHNL_1 = 0,
-    MP_TIMER_CAP_CHNL_2,
-    MP_TIMER_CAP_CHNL_3,
-    MP_TIMER_CAP_CHNL_CNT
-} mp_timer_capture_channels_t;
+typedef ic_finished_callback_t timer_capture_callback_t;
 
 typedef struct st_ic_driver
 {
@@ -41,11 +28,11 @@ struct st_ic_driver_ifc
      */
     response_status_t (*init)(void);
 
-    response_status_t (*capture_pulse)(mp_timer_capture_channels_t, bool_t);
+    response_status_t (*capture_pulse)(mp_timer_capture_channels_t, mp_timer_capture_mode_t);
 
-    response_status_t (*capture_frequency)(mp_timer_capture_channels_t, bool_t);
+    response_status_t (*capture_frequency)(mp_timer_capture_channels_t, mp_timer_capture_mode_t);
 
-    response_status_t (*capture_edge)(mp_timer_capture_channels_t, mp_timer_capture_type_t, bool_t);
+    response_status_t (*capture_edge)(mp_timer_capture_channels_t, mp_timer_capture_type_t, mp_timer_capture_mode_t);
 
     response_status_t (*register_callback)(mp_timer_capture_channels_t, timer_capture_callback_t);
     response_status_t (*get_data)(mp_timer_capture_channels_t, uint32_t*);

@@ -6,6 +6,7 @@
 #include "su_common.h"
 
 #define HAL_SUPPORTED_TIMERS_CNT 8
+#define FREE_SLOT 0xFFFFFFFFu
 
 union capture_data
 {
@@ -28,16 +29,16 @@ typedef struct st_stm32_ic_driver
 {
     timer_capture_driver_t      base;
     struct hal_capture_tim_ifc* hal_drv;
-    volatile union capture_data cap_data[MP_TIMER_CAP_CHNL_CNT];
-    timer_capture_callback_t    capture_cb[MP_TIMER_CAP_CHNL_CNT];
-    mp_timer_capture_type_t     req_cap_type[MP_TIMER_CAP_CHNL_CNT];
-    volatile bool_t             one_shot[MP_TIMER_CAP_CHNL_CNT];
-    volatile bool_t             on_going[MP_TIMER_CAP_CHNL_CNT];
+    volatile union capture_data cap_data[INPUT_CAPTURE_CHANNEL_CNT];
+    timer_capture_callback_t    capture_cb[INPUT_CAPTURE_CHANNEL_CNT];
+    mp_timer_capture_type_t     req_cap_type[INPUT_CAPTURE_CHANNEL_CNT];
+    volatile mp_timer_capture_mode_t one_shot[INPUT_CAPTURE_CHANNEL_CNT];
+    volatile bool_t             on_going[INPUT_CAPTURE_CHANNEL_CNT];
 } stm32_ic_driver_t;
 
 static stm32_ic_driver_t g_ic_drv = { .base = { 0U }, .hal_drv = NULL };
 
-static uint32_t hal_timers_slot[HAL_SUPPORTED_TIMERS_CNT] = { -1 };
+static uint32_t hal_timers_slot[HAL_SUPPORTED_TIMERS_CNT] = { FREE_SLOT };
 
 static inline void hash_hal_timer(TIM_HandleTypeDef* hal_tim,
                                   uint16_t           hal_chnl_shift, // 0,4,8,12 (nibble shift)
@@ -88,13 +89,13 @@ static inline int32_t unhash_hal_slot(TIM_HandleTypeDef* htim)
     uint32_t packed = hal_timers_slot[tindex];
     if (packed == 0xFFFFFFFFu)
     {
-        return -1;
+        return FREE_SLOT; // not found
     }
 
     uint32_t active = (uint32_t)htim->Channel; // 1..4
     if ((active & 0xF) == 0)
     {
-        return -1; // defensive
+        return FREE_SLOT; // defensive
     }
     uint32_t ch_idx    = __builtin_ctz(active); // 0..3
     uint32_t nib_shift = ch_idx * 4;
@@ -103,7 +104,7 @@ static inline int32_t unhash_hal_slot(TIM_HandleTypeDef* htim)
     uint32_t pos_plus1 = (packed >> nib_shift) & 0xFu;
     if (pos_plus1 == 0)
     {
-        return -1;
+        return FREE_SLOT;
     }
 
     return (int32_t)(base_idx + (pos_plus1 - 1u));
@@ -126,8 +127,8 @@ static void cap_cb(TIM_HandleTypeDef* htim)
 
     switch (g_ic_drv.req_cap_type[drv_tim_idx])
     {
-        case MP_TIMER_CAP_TYPE_RISING_EDGE:
-        case MP_TIMER_CAP_TYPE_FALLING_EDGE:
+        case IC_CAPTURE_RISING_EDGE:
+        case IC_CAPTURE_FALLING_EDGE:
             cap_data->edge_data.diff_ticks =
               (ccap >= cap_data->edge_data.last_ccr)
                 ? (ccap - cap_data->edge_data.last_ccr)
@@ -146,7 +147,7 @@ static void cap_cb(TIM_HandleTypeDef* htim)
             }
             break;
 
-        case MP_TIMER_CAP_TYPE_PULSE_WIDTH:
+        case IC_MEASURE_PULSE_WIDTH:
 
             if (cap_data->pulse_width_data.waiting_edge == 0)
             {
@@ -193,8 +194,6 @@ static void cap_cb(TIM_HandleTypeDef* htim)
                 }
             }
             break;
-        case MP_TIMER_CAP_TYPE_FREQUENCY:
-            return;
         default:
             return;
     }
@@ -216,25 +215,24 @@ static response_status_t init(void)
     }
     else
     {
-        for (uint8_t i = 0; i < g_ic_drv.base.hw_inst_cnt; ++i)
+        for (uint8_t i = 0; (i < g_ic_drv.base.hw_inst_cnt) && (ret_val == RET_OK); ++i)
         {
             if (g_ic_drv.hal_drv[i].base_timer == NULL)
             {
                 ret_val = RET_ERROR;
-                break;
             }
             else
             {
                 hash_hal_timer(g_ic_drv.hal_drv[i].base_timer,
                                g_ic_drv.hal_drv[i].engaged_channels,
                                i);
-                HAL_TIM_RegisterCallback(g_ic_drv.hal_drv[i].base_timer,
+                HAL_StatusTypeDef hal_ret = HAL_TIM_RegisterCallback(g_ic_drv.hal_drv[i].base_timer,
                                          HAL_TIM_IC_CAPTURE_CB_ID,
                                          cap_cb);
+                ret_val = translate_hal_status(hal_ret);
             }
         }
 
-        ret_val = RET_OK;
     }
 
     return ret_val;
@@ -264,11 +262,11 @@ static void obtain_timer_from_channel(mp_timer_capture_channels_t p_channel,
 
 static response_status_t req_edge_capture(mp_timer_capture_channels_t p_channel,
                                           mp_timer_capture_type_t     rising_falling_edge,
-                                          bool_t                      one_shot)
+                                          mp_timer_capture_mode_t one_shot)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(rising_falling_edge > MP_TIMER_CAP_TYPE_FALLING_EDGE, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(rising_falling_edge > IC_CAPTURE_FALLING_EDGE, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
@@ -291,16 +289,16 @@ static response_status_t req_edge_capture(mp_timer_capture_channels_t p_channel,
     return translate_hal_status(hal_ret);
 }
 
-static response_status_t req_pulse_capture(mp_timer_capture_channels_t p_channel, bool_t one_shot)
+static response_status_t req_pulse_capture(mp_timer_capture_channels_t p_channel, mp_timer_capture_mode_t one_shot)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
     TIM_HandleTypeDef* base_timer = NULL;
     uint32_t           hal_chnl   = 0;
 
-    g_ic_drv.req_cap_type[p_channel] = MP_TIMER_CAP_TYPE_PULSE_WIDTH;
+    g_ic_drv.req_cap_type[p_channel] = IC_MEASURE_PULSE_WIDTH;
     memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
     g_ic_drv.one_shot[p_channel] = one_shot;
     __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
@@ -335,7 +333,7 @@ static response_status_t register_callback(mp_timer_capture_channels_t p_channel
 static response_status_t get_data(mp_timer_capture_channels_t p_channel, uint32_t* p_data)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(p_data == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
@@ -343,18 +341,18 @@ static response_status_t get_data(mp_timer_capture_channels_t p_channel, uint32_
 
     switch (g_ic_drv.req_cap_type[p_channel])
     {
-        case MP_TIMER_CAP_TYPE_RISING_EDGE:
-        case MP_TIMER_CAP_TYPE_FALLING_EDGE:
+        case IC_CAPTURE_RISING_EDGE:
+        case IC_CAPTURE_FALLING_EDGE:
             *p_data = g_ic_drv.cap_data[p_channel].edge_data.diff_ticks;
             ret_val = RET_OK;
             break;
 
-        case MP_TIMER_CAP_TYPE_PULSE_WIDTH:
+        case IC_MEASURE_PULSE_WIDTH:
             *p_data = g_ic_drv.cap_data[p_channel].pulse_width_data.pulse_width;
             ret_val = RET_OK;
             break;
 
-        case MP_TIMER_CAP_TYPE_FREQUENCY:
+        case IC_MEASURE_FREQUENCY:
             // Not implemented in this driver
             ret_val = RET_NOT_SUPPORTED;
             break;
@@ -370,7 +368,7 @@ static response_status_t get_data(mp_timer_capture_channels_t p_channel, uint32_
 static response_status_t stop_capture(mp_timer_capture_channels_t p_channel)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_channel >= MP_TIMER_CAP_CHNL_CNT, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
@@ -405,7 +403,7 @@ timer_capture_driver_t* timer_capture_driver_register(void)
 {
 
     memset(&g_ic_drv, 0, sizeof(g_ic_drv));
-    memset(hal_timers_slot, (uint32_t)-1, sizeof(hal_timers_slot));
+    memset(hal_timers_slot, FREE_SLOT, sizeof(hal_timers_slot));
 
     g_ic_drv.base.api = &g_interface;
     return (timer_capture_driver_t*)&g_ic_drv;
