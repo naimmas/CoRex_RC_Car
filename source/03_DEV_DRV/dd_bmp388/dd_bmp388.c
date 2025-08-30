@@ -52,7 +52,7 @@ static response_status_t write_register(bmp388_dev_t* ppt_dev, uint8_t* ppt_data
 
     ret_val = ha_iic_master_mem_write(IIC_GET_DEV_PORT(pt_curr_driver->dev_id),
                                       IIC_GET_DEV_ADDRESS(pt_curr_driver->dev_id),
-                                      ppt_data,
+                                      (const uint8_t*)ppt_data,
                                       p_data_sz,
                                       p_reg_addr,
                                       HW_IIC_MEM_SZ_8BIT,
@@ -425,7 +425,7 @@ static response_status_t send_cmd(bmp388_dev_t* ppt_dev, bmp388_cmds p_cmd, uint
             cmd_rdy = BMP3_GET_BITS(reg_val, BMP388_REG_SENS_STATUS_CMD) == 0x01;
             if (cmd_rdy == TRUE)
             {
-                ret_val = write_register(ppt_dev, &p_cmd, DEFAULT_IIC_REG_SZ, BMP388_REG_CMD);
+                ret_val = write_register(ppt_dev, (uint8_t*)&p_cmd, DEFAULT_IIC_REG_SZ, BMP388_REG_CMD);
                 break;
             }
             else
