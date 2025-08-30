@@ -1,24 +1,19 @@
 #ifndef HA_UART_PRIVATE_H
 #define HA_UART_PRIVATE_H
 
+#include "ha_uart.h"
 #include "stddef.h"
 #include "stdint.h"
 #include "su_common.h"
 
 typedef struct st_uart_driver_ifc* uart_driver_ifc;
+typedef uart_comm_port_t mp_uart_ifc_idx_t;
 
 typedef struct st_uart_driver
 {
     uart_driver_ifc api;
     uint16_t        hw_inst_cnt;
 } uart_driver_t;
-
-typedef enum
-{
-    MP_UART_PORT1 = 0,
-    MP_UART_PORT2,
-    MP_UART_PORT_CNT,
-} mp_uart_ifc_idx_t;
 
 typedef enum
 {
