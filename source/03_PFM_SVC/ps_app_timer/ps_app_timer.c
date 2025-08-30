@@ -5,9 +5,9 @@
 #include "string.h"
 
 #define SET_ACTIVE_TIMER_MASK(timer_type, timer_id) \
-    (g_active_timers_msk[timer_type] |= (1U << timer_id))
+    (g_active_timers_msk[timer_type] |= (1U << (timer_id)))
 #define CLEAR_ACTIVE_TIMER_MASK(timer_type, timer_id) \
-    (g_active_timers_msk[timer_type] &= ~(1U << timer_id))
+    (g_active_timers_msk[timer_type] &= ~(1U << (timer_id)))
 
 typedef struct
 {
@@ -92,7 +92,7 @@ static response_status_t determine_timer_type_and_period(uint32_t         p_time
 }
 static int8_t find_free_timer(void)
 {
-    for (size_t i = 0; i < MAX_USER_TIMER; i++)
+    for (int8_t i = 0; i < MAX_USER_TIMER; i++)
     {
         if (g_app_timer[i].id == -1)
         {
@@ -243,7 +243,7 @@ response_status_t ps_app_timer_start(app_timer_handler_t* p_timer_handler, uint3
     app_timer_t*      timer   = (app_timer_t*)p_timer_handler;
 
     // Find the timer type based on the time unit and period
-    gp_timers_t timer_type_to_use;
+    gp_timers_t timer_type_to_use = TIMER_CNT;
     uint32_t    period_to_use = 0;
 
     if (determine_timer_type_and_period(p_timer_period,
@@ -307,7 +307,7 @@ response_status_t ps_app_timer_update_period(app_timer_handler_t* p_timer_handle
     app_timer_t*      timer   = (app_timer_t*)p_timer_handler;
 
     // Find the timer type based on the time unit and period
-    gp_timers_t timer_type_to_use;
+    gp_timers_t timer_type_to_use = TIMER_CNT;
     uint32_t    period_to_use = 0;
 
     if (determine_timer_type_and_period(p_new_period,
