@@ -117,19 +117,29 @@ response_status_t dd_fsi6_read_input(fsi6_inputs_t input, uint32_t* value)
     g_fsi6_dev.timeout_occurred     = FALSE;
     input_capture_channel_t channel = in2ch(input);
 
-    ret_val = ps_app_timer_start(g_fsi6_dev.timeout_handler, 40, APP_TIMER_UNIT_MS);
     if (ret_val == RET_OK)
     {
         ret_val =
-          ha_input_capture_request_capture(channel, IC_MEASURE_PULSE_WIDTH, IC_ONE_SHOT_CAPTURE);
+        ha_input_capture_request_capture(channel, IC_MEASURE_PULSE_WIDTH, IC_ONE_SHOT_CAPTURE);
+    }
+    
+    if (ret_val == RET_OK)
+    {
+        ret_val = ps_app_timer_start(g_fsi6_dev.timeout_handler, 40, APP_TIMER_UNIT_MS);
     }
 
-    while (g_fsi6_dev.waiting_for_data && !g_fsi6_dev.timeout_occurred)
+    while ((ret_val == RET_OK) && (g_fsi6_dev.waiting_for_data == TRUE) && (g_fsi6_dev.timeout_occurred == FALSE))
     {
         ;
     }
 
-    if (g_fsi6_dev.timeout_occurred)
+    if (ret_val != RET_OK)
+    {
+        // Error occurred
+        g_fsi6_dev.waiting_for_data = FALSE;
+        *value                      = 0; // Return 0 if error occurred
+    }
+    else if (g_fsi6_dev.timeout_occurred == TRUE)
     {
         ret_val = RET_TIMEOUT;
         // ha_input_capture_abort(channel);
