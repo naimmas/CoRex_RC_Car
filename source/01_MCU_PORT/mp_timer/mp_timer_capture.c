@@ -8,7 +8,7 @@
 #define HAL_SUPPORTED_TIMERS_CNT 8
 #define FREE_SLOT 0xFFFFFFFFu
 
-union capture_data
+union un_capture_data
 {
     struct
     {
@@ -29,7 +29,7 @@ typedef struct st_stm32_ic_driver
 {
     timer_capture_driver_t      base;
     struct hal_capture_tim_ifc* hal_drv;
-    volatile union capture_data cap_data[INPUT_CAPTURE_CHANNEL_CNT];
+    volatile union un_capture_data cap_data[INPUT_CAPTURE_CHANNEL_CNT];
     timer_capture_callback_t    capture_cb[INPUT_CAPTURE_CHANNEL_CNT];
     mp_timer_capture_type_t     req_cap_type[INPUT_CAPTURE_CHANNEL_CNT];
     volatile mp_timer_capture_mode_t one_shot[INPUT_CAPTURE_CHANNEL_CNT];
@@ -38,25 +38,25 @@ typedef struct st_stm32_ic_driver
 
 static stm32_ic_driver_t g_ic_drv = { .base = { 0U }, .hal_drv = NULL };
 
-static uint32_t hal_timers_slot[HAL_SUPPORTED_TIMERS_CNT] = { FREE_SLOT };
+static uint32_t g_hal_timers_slot[HAL_SUPPORTED_TIMERS_CNT] = { FREE_SLOT };
 
-static inline void hash_hal_timer(TIM_HandleTypeDef* hal_tim,
-                                  uint16_t           hal_chnl_shift, // 0,4,8,12 (nibble shift)
-                                  uint16_t           slot) // dense slot start for this TIMx
+static inline void hash_hal_timer(TIM_HandleTypeDef* ppt_hal_tim,
+                                  uint16_t           p_hal_chnl_shift, // 0,4,8,12 (nibble shift)
+                                  uint16_t           p_slot) // dense slot start for this TIMx
 {
-    uint32_t addr   = (uint32_t)hal_tim->Instance;
-    uint32_t block  = (((addr >> 16) & 0xF) == 1u); // 0: APB1, 1: APB2
-    uint32_t offset = (addr & 0xFFFFu) >> 10;       // /0x400 -> 0..3
+    uint32_t addr   = (uint32_t)ppt_hal_tim->Instance;
+    uint32_t block  = (((addr >> 16) & 0xF) == 1U); // 0: APB1, 1: APB2
+    uint32_t offset = (addr & 0xFFFFU) >> 10;       // /0x400 -> 0..3
     uint32_t index  = ((block << 2) + offset);      // 0..7
 
-    uint32_t packed = hal_timers_slot[index];
+    uint32_t packed = g_hal_timers_slot[index];
 
-    if (packed == 0xFFFFFFFFu)
+    if (packed == 0xFFFFFFFFU)
     {
         // first channel for this timer: set base slot and write nibble=1 at this channel
-        uint32_t encoded_tim   = (uint32_t)slot; // base index in upper 16
-        uint32_t encoded_chnl  = (1u & 0xFu) << hal_chnl_shift;
-        hal_timers_slot[index] = (encoded_tim << 16) | encoded_chnl;
+        uint32_t encoded_tim   = (uint32_t)p_slot; // base index in upper 16
+        uint32_t encoded_chnl  = (1U & 0xFU) << p_hal_chnl_shift;
+        g_hal_timers_slot[index] = (encoded_tim << 16) | encoded_chnl;
     }
     else
     {
@@ -64,35 +64,35 @@ static inline void hash_hal_timer(TIM_HandleTypeDef* hal_tim,
         uint32_t max_pos = 0;
         for (uint8_t s = 0; s <= 12; s += 4)
         {
-            uint32_t v = (packed >> s) & 0xFu;
+            uint32_t v = (packed >> s) & 0xFU;
             if (v > max_pos)
             {
                 max_pos = v;
             }
         }
-        uint32_t pos_plus1 = ((max_pos + 1u) & 0xFu);
-        uint32_t nib_mask  = (0xFu << hal_chnl_shift);
+        uint32_t pos_plus1 = ((max_pos + 1U) & 0xFU);
+        uint32_t nib_mask  = (0xFU << p_hal_chnl_shift);
         // keep upper 16 bits (base slot), update only this channel's nibble
-        packed                 = (packed & ~nib_mask) | (pos_plus1 << hal_chnl_shift);
-        hal_timers_slot[index] = packed;
+        packed                 = (packed & ~nib_mask) | (pos_plus1 << p_hal_chnl_shift);
+        g_hal_timers_slot[index] = packed;
     }
 }
 
 // Return: dense slot index (0..N-1) or -1 if not found / not active
-static inline int32_t unhash_hal_slot(TIM_HandleTypeDef* htim)
+static inline int32_t unhash_hal_slot(TIM_HandleTypeDef* ppt_htim)
 {
-    uint32_t addr   = (uint32_t)htim->Instance;
-    uint32_t block  = (((addr >> 16) & 0xF) == 1u);
-    uint32_t offset = (addr & 0xFFFFu) >> 10;
+    uint32_t addr   = (uint32_t)ppt_htim->Instance;
+    uint32_t block  = (((addr >> 16) & 0xF) == 1U);
+    uint32_t offset = (addr & 0xFFFFU) >> 10;
     uint32_t tindex = ((block << 2) + offset);
 
-    uint32_t packed = hal_timers_slot[tindex];
-    if (packed == 0xFFFFFFFFu)
+    uint32_t packed = g_hal_timers_slot[tindex];
+    if (packed == 0xFFFFFFFFU)
     {
         return FREE_SLOT; // not found
     }
 
-    uint32_t active = (uint32_t)htim->Channel; // 1..4
+    uint32_t active = (uint32_t)ppt_htim->Channel; // 1..4
     if ((active & 0xF) == 0)
     {
         return FREE_SLOT; // defensive
@@ -101,19 +101,19 @@ static inline int32_t unhash_hal_slot(TIM_HandleTypeDef* htim)
     uint32_t nib_shift = ch_idx * 4;
 
     uint32_t base_idx  = packed >> 16;
-    uint32_t pos_plus1 = (packed >> nib_shift) & 0xFu;
+    uint32_t pos_plus1 = (packed >> nib_shift) & 0xFU;
     if (pos_plus1 == 0)
     {
         return FREE_SLOT;
     }
 
-    return (int32_t)(base_idx + (pos_plus1 - 1u));
+    return (int32_t)(base_idx + (pos_plus1 - 1U));
 }
 
-static void cap_cb(TIM_HandleTypeDef* htim)
+static void cap_cb(TIM_HandleTypeDef* ppt_htim)
 {
-    volatile uint32_t drv_tim_idx = unhash_hal_slot(htim);
-    volatile uint32_t channel     = __builtin_ctz(htim->Channel) << 2;
+    volatile uint32_t drv_tim_idx = unhash_hal_slot(ppt_htim);
+    volatile uint32_t channel     = __builtin_ctz(ppt_htim->Channel) << 2;
 
     if (drv_tim_idx > g_ic_drv.base.hw_inst_cnt)
     {
@@ -122,75 +122,75 @@ static void cap_cb(TIM_HandleTypeDef* htim)
 
     g_ic_drv.on_going[drv_tim_idx] = TRUE;
 
-    volatile union capture_data* cap_data = &g_ic_drv.cap_data[drv_tim_idx];
-    volatile uint32_t            ccap     = __HAL_TIM_GET_COMPARE(htim, channel);
+    volatile union un_capture_data* pt_cap_data = &g_ic_drv.cap_data[drv_tim_idx];
+    volatile uint32_t            ccap     = __HAL_TIM_GET_COMPARE(ppt_htim, channel);
 
     switch (g_ic_drv.req_cap_type[drv_tim_idx])
     {
         case IC_CAPTURE_RISING_EDGE:
         case IC_CAPTURE_FALLING_EDGE:
-            cap_data->edge_data.diff_ticks =
-              (ccap >= cap_data->edge_data.last_ccr)
-                ? (ccap - cap_data->edge_data.last_ccr)
-                : ((htim->Instance->ARR - cap_data->edge_data.last_ccr) + ccap + 1u);
+            pt_cap_data->edge_data.diff_ticks =
+              (ccap >= pt_cap_data->edge_data.last_ccr)
+                ? (ccap - pt_cap_data->edge_data.last_ccr)
+                : ((ppt_htim->Instance->ARR - pt_cap_data->edge_data.last_ccr) + ccap + 1U);
 
-            cap_data->edge_data.last_ccr = ccap;
+            pt_cap_data->edge_data.last_ccr = ccap;
 
             if (g_ic_drv.capture_cb[drv_tim_idx] != NULL)
             {
-                g_ic_drv.capture_cb[drv_tim_idx](drv_tim_idx, cap_data->edge_data.diff_ticks);
+                g_ic_drv.capture_cb[drv_tim_idx](drv_tim_idx, pt_cap_data->edge_data.diff_ticks);
             }
             if (g_ic_drv.one_shot[drv_tim_idx])
             {
-                __HAL_TIM_SET_COMPARE(htim, channel, 0);
-                HAL_TIM_IC_Stop_IT(htim, channel);
+                __HAL_TIM_SET_COMPARE(ppt_htim, channel, 0);
+                HAL_TIM_IC_Stop_IT(ppt_htim, channel);
             }
             break;
 
         case IC_MEASURE_PULSE_WIDTH:
 
-            if (cap_data->pulse_width_data.waiting_edge == 0)
+            if (pt_cap_data->pulse_width_data.waiting_edge == 0)
             {
                 // Rising edge detected
-                cap_data->pulse_width_data.rising_edge = HAL_TIM_ReadCapturedValue(htim, channel);
+                pt_cap_data->pulse_width_data.rising_edge = HAL_TIM_ReadCapturedValue(ppt_htim, channel);
 
                 // Switch to falling edge
-                __HAL_TIM_SET_CAPTUREPOLARITY(htim, channel, TIM_INPUTCHANNELPOLARITY_FALLING);
-                cap_data->pulse_width_data.waiting_edge = 1;
+                __HAL_TIM_SET_CAPTUREPOLARITY(ppt_htim, channel, TIM_INPUTCHANNELPOLARITY_FALLING);
+                pt_cap_data->pulse_width_data.waiting_edge = 1;
             }
             else
             {
                 // Falling edge detected
-                cap_data->pulse_width_data.falling_edge = HAL_TIM_ReadCapturedValue(htim, channel);
+                pt_cap_data->pulse_width_data.falling_edge = HAL_TIM_ReadCapturedValue(ppt_htim, channel);
 
                 // Calculate pulse width (in µs)
-                if (cap_data->pulse_width_data.falling_edge
-                    >= cap_data->pulse_width_data.rising_edge)
+                if (pt_cap_data->pulse_width_data.falling_edge
+                    >= pt_cap_data->pulse_width_data.rising_edge)
                 {
-                    cap_data->pulse_width_data.pulse_width =
-                      cap_data->pulse_width_data.falling_edge
-                      - cap_data->pulse_width_data.rising_edge;
+                    pt_cap_data->pulse_width_data.pulse_width =
+                      pt_cap_data->pulse_width_data.falling_edge
+                      - pt_cap_data->pulse_width_data.rising_edge;
                 }
                 else
                 {
-                    cap_data->pulse_width_data.pulse_width =
-                      (htim->Instance->ARR - cap_data->pulse_width_data.rising_edge + 1)
-                      + cap_data->pulse_width_data.falling_edge;
+                    pt_cap_data->pulse_width_data.pulse_width =
+                      (ppt_htim->Instance->ARR - pt_cap_data->pulse_width_data.rising_edge + 1)
+                      + pt_cap_data->pulse_width_data.falling_edge;
                 }
 
                 // Switch back to rising edge
-                __HAL_TIM_SET_CAPTUREPOLARITY(htim, channel, TIM_INPUTCHANNELPOLARITY_RISING);
-                cap_data->pulse_width_data.waiting_edge = 0;
+                __HAL_TIM_SET_CAPTUREPOLARITY(ppt_htim, channel, TIM_INPUTCHANNELPOLARITY_RISING);
+                pt_cap_data->pulse_width_data.waiting_edge = 0;
 
                 if (g_ic_drv.capture_cb[drv_tim_idx] != NULL)
                 {
                     g_ic_drv.capture_cb[drv_tim_idx](drv_tim_idx,
-                                                     cap_data->pulse_width_data.pulse_width);
+                                                     pt_cap_data->pulse_width_data.pulse_width);
                 }
                 if (g_ic_drv.one_shot[drv_tim_idx])
                 {
-                    __HAL_TIM_SET_COMPARE(htim, channel, 0);
-                    HAL_TIM_IC_Stop_IT(htim, channel);
+                    __HAL_TIM_SET_COMPARE(ppt_htim, channel, 0);
+                    HAL_TIM_IC_Stop_IT(ppt_htim, channel);
                 }
             }
             break;
@@ -239,7 +239,7 @@ static response_status_t init(void)
 }
 
 static void obtain_timer_from_channel(mp_timer_capture_channels_t p_channel,
-                                      TIM_HandleTypeDef** base_timer, uint32_t* channel_to_activate)
+                                      TIM_HandleTypeDef** ppt_base_timer, uint32_t* ppt_channel_to_activate)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, );
 
@@ -249,33 +249,32 @@ static void obtain_timer_from_channel(mp_timer_capture_channels_t p_channel,
         uint8_t engaged_channels_cnt = __builtin_popcount(g_ic_drv.hal_drv[i].engaged_channels);
         if (p_channel < total + engaged_channels_cnt)
         {
-            *base_timer          = g_ic_drv.hal_drv[i].base_timer;
-            *channel_to_activate = p_channel - total;
+            *ppt_base_timer          = g_ic_drv.hal_drv[i].base_timer;
+            *ppt_channel_to_activate = p_channel - total;
             break;
         }
-        else
-        {
-            total += engaged_channels_cnt;
-        }
+        
+                    total += engaged_channels_cnt;
+       
     }
 }
 
 static response_status_t req_edge_capture(mp_timer_capture_channels_t p_channel,
-                                          mp_timer_capture_type_t     rising_falling_edge,
-                                          mp_timer_capture_mode_t one_shot)
+                                          mp_timer_capture_type_t     p_rising_falling_edge,
+                                          mp_timer_capture_mode_t p_one_shot)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(rising_falling_edge > IC_CAPTURE_FALLING_EDGE, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_rising_falling_edge > IC_CAPTURE_FALLING_EDGE, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
-    TIM_HandleTypeDef* base_timer = NULL;
+    TIM_HandleTypeDef* pt_base_timer = NULL;
     uint32_t           hal_chnl   = 0;
 
-    g_ic_drv.req_cap_type[p_channel] = rising_falling_edge;
-    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
-    g_ic_drv.one_shot[p_channel] = one_shot;
+    g_ic_drv.req_cap_type[p_channel] = p_rising_falling_edge;
+    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union un_capture_data));
+    g_ic_drv.one_shot[p_channel] = p_one_shot;
     __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
                           g_ic_drv.hal_drv[p_channel].engaged_channels,
                           0);
@@ -289,18 +288,18 @@ static response_status_t req_edge_capture(mp_timer_capture_channels_t p_channel,
     return translate_hal_status(hal_ret);
 }
 
-static response_status_t req_pulse_capture(mp_timer_capture_channels_t p_channel, mp_timer_capture_mode_t one_shot)
+static response_status_t req_pulse_capture(mp_timer_capture_channels_t p_channel, mp_timer_capture_mode_t p_one_shot)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
-    TIM_HandleTypeDef* base_timer = NULL;
+    TIM_HandleTypeDef* pt_base_timer = NULL;
     uint32_t           hal_chnl   = 0;
 
     g_ic_drv.req_cap_type[p_channel] = IC_MEASURE_PULSE_WIDTH;
-    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
-    g_ic_drv.one_shot[p_channel] = one_shot;
+    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union un_capture_data));
+    g_ic_drv.one_shot[p_channel] = p_one_shot;
     __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
                           g_ic_drv.hal_drv[p_channel].engaged_channels,
                           0);
@@ -316,25 +315,25 @@ static response_status_t req_pulse_capture(mp_timer_capture_channels_t p_channel
 }
 
 static response_status_t register_callback(mp_timer_capture_channels_t p_channel,
-                                           timer_capture_callback_t    p_callback)
+                                           timer_capture_callback_t    ppt_callback)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_callback == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_callback == NULL, RET_PARAM_ERROR);
 
     response_status_t ret_val = RET_OK;
 
     CRITICAL_ENTER();
-    g_ic_drv.capture_cb[p_channel] = p_callback;
+    g_ic_drv.capture_cb[p_channel] = ppt_callback;
     CRITICAL_EXIT();
 
     return ret_val;
 }
 
-static response_status_t get_data(mp_timer_capture_channels_t p_channel, uint32_t* p_data)
+static response_status_t get_data(mp_timer_capture_channels_t p_channel, uint32_t* ppt_data)
 {
     ASSERT_AND_RETURN(g_ic_drv.hal_drv == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(p_channel >= INPUT_CAPTURE_CHANNEL_CNT, RET_NOT_SUPPORTED);
-    ASSERT_AND_RETURN(p_data == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_data == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     response_status_t ret_val = RET_OK;
@@ -343,12 +342,12 @@ static response_status_t get_data(mp_timer_capture_channels_t p_channel, uint32_
     {
         case IC_CAPTURE_RISING_EDGE:
         case IC_CAPTURE_FALLING_EDGE:
-            *p_data = g_ic_drv.cap_data[p_channel].edge_data.diff_ticks;
+            *ppt_data = g_ic_drv.cap_data[p_channel].edge_data.diff_ticks;
             ret_val = RET_OK;
             break;
 
         case IC_MEASURE_PULSE_WIDTH:
-            *p_data = g_ic_drv.cap_data[p_channel].pulse_width_data.pulse_width;
+            *ppt_data = g_ic_drv.cap_data[p_channel].pulse_width_data.pulse_width;
             ret_val = RET_OK;
             break;
 
@@ -372,17 +371,17 @@ static response_status_t stop_capture(mp_timer_capture_channels_t p_channel)
     ASSERT_AND_RETURN(g_ic_drv.on_going[p_channel], RET_BUSY);
 
     HAL_StatusTypeDef  hal_ret    = HAL_OK;
-    TIM_HandleTypeDef* base_timer = NULL;
+    TIM_HandleTypeDef* pt_base_timer = NULL;
     uint32_t           hal_chnl   = 0;
 
-    obtain_timer_from_channel(p_channel, &base_timer, &hal_chnl);
+    obtain_timer_from_channel(p_channel, &pt_base_timer, &hal_chnl);
 
-    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union capture_data));
+    memset((void*)&g_ic_drv.cap_data[p_channel], 0, sizeof(union un_capture_data));
     __HAL_TIM_SET_COMPARE(g_ic_drv.hal_drv[p_channel].base_timer,
                           g_ic_drv.hal_drv[p_channel].engaged_channels,
                           0);
 
-    hal_ret = HAL_TIM_IC_Stop_IT(base_timer, hal_chnl);
+    hal_ret = HAL_TIM_IC_Stop_IT(pt_base_timer, hal_chnl);
 
     g_ic_drv.on_going[p_channel] = FALSE;
 
@@ -403,7 +402,7 @@ timer_capture_driver_t* timer_capture_driver_register(void)
 {
 
     memset(&g_ic_drv, 0, sizeof(g_ic_drv));
-    memset(hal_timers_slot, FREE_SLOT, sizeof(hal_timers_slot));
+    memset(g_hal_timers_slot, FREE_SLOT, sizeof(g_hal_timers_slot));
 
     g_ic_drv.base.api = &g_interface;
     return (timer_capture_driver_t*)&g_ic_drv;

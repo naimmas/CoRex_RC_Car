@@ -18,11 +18,11 @@ static stm32_uart_dma_driver_t g_uart_dma_drv = { .hw_insts            = NULL,
                                                   .dma_in_progress     = 0x00,
                                                   .hw_insts_registered = FALSE };
 
-static uint32_t get_inst_idx(UART_HandleTypeDef* huart)
+static uint32_t get_inst_idx(UART_HandleTypeDef* ppt_huart)
 {
     for (uint32_t i = 0; i < __builtin_popcount(g_uart_dma_drv.dma_in_progress); i++)
     {
-        if (huart == g_uart_dma_drv.hw_insts[i])
+        if (ppt_huart == g_uart_dma_drv.hw_insts[i])
         {
             return i;
         }
@@ -31,9 +31,9 @@ static uint32_t get_inst_idx(UART_HandleTypeDef* huart)
 }
 
 /* Successful TX complete */
-void dma_tx_finished_cb(UART_HandleTypeDef* huart)
+void dma_tx_finished_cb(UART_HandleTypeDef* ppt_huart)
 {
-    uint32_t ifc_index = get_inst_idx(huart);
+    uint32_t ifc_index = get_inst_idx(ppt_huart);
     if (ifc_index >= UART_PORT_CNT)
     {
         return;
@@ -46,9 +46,9 @@ void dma_tx_finished_cb(UART_HandleTypeDef* huart)
 }
 
 /* Abort complete */
-void dma_tx_abort_cb(UART_HandleTypeDef* huart)
+void dma_tx_abort_cb(UART_HandleTypeDef* ppt_huart)
 {
-    uint32_t ifc_index = get_inst_idx(huart);
+    uint32_t ifc_index = get_inst_idx(ppt_huart);
     if (ifc_index >= UART_PORT_CNT)
     {
         return;
@@ -61,9 +61,9 @@ void dma_tx_abort_cb(UART_HandleTypeDef* huart)
 }
 
 /* Error handler */
-void dma_tx_error_cb(UART_HandleTypeDef* huart)
+void dma_tx_error_cb(UART_HandleTypeDef* ppt_huart)
 {
-    uint32_t ifc_index = get_inst_idx(huart);
+    uint32_t ifc_index = get_inst_idx(ppt_huart);
     if (ifc_index >= UART_PORT_CNT)
     {
         return;
@@ -112,28 +112,28 @@ response_status_t dma_tx_abort(mp_uart_ifc_idx_t p_ifc_index)
     return translate_hal_status(ret_hal);
 }
 
-response_status_t dma_tx_register_callback(mp_uart_ifc_idx_t p_ifc_index, dma_tx_evt_cb p_evt_cb)
+response_status_t dma_tx_register_callback(mp_uart_ifc_idx_t p_ifc_index, dma_tx_evt_cb ppt_evt_cb)
 {
     ASSERT_AND_RETURN(g_uart_dma_drv.hw_insts_registered == FALSE, RET_NOT_INITIALIZED);
 
-    g_uart_dma_drv.user_cb[p_ifc_index] = p_evt_cb;
+    g_uart_dma_drv.user_cb[p_ifc_index] = ppt_evt_cb;
 
     return RET_OK;
 }
 
-void dma_hw_insts_register(UART_HandleTypeDef* const * hw_insts)
+void dma_hw_insts_register(UART_HandleTypeDef* const * ppt_hw_insts)
 {
-    g_uart_dma_drv.hw_insts = hw_insts;
-    if (hw_insts != NULL)
+    g_uart_dma_drv.hw_insts = ppt_hw_insts;
+    if (ppt_hw_insts != NULL)
     {
         for (uint32_t i = 0; i < UART_PORT_CNT; i++)
         {
-            HAL_UART_RegisterCallback(hw_insts[i], HAL_UART_TX_COMPLETE_CB_ID, dma_tx_finished_cb);
-            HAL_UART_RegisterCallback(hw_insts[i],
+            HAL_UART_RegisterCallback(ppt_hw_insts[i], HAL_UART_TX_COMPLETE_CB_ID, dma_tx_finished_cb);
+            HAL_UART_RegisterCallback(ppt_hw_insts[i],
                                       HAL_UART_ABORT_TRANSMIT_COMPLETE_CB_ID,
                                       dma_tx_abort_cb);
-            HAL_UART_RegisterCallback(hw_insts[i], HAL_UART_ERROR_CB_ID, dma_tx_error_cb);
+            HAL_UART_RegisterCallback(ppt_hw_insts[i], HAL_UART_ERROR_CB_ID, dma_tx_error_cb);
         }
     }
-    g_uart_dma_drv.hw_insts_registered = (hw_insts != NULL);
+    g_uart_dma_drv.hw_insts_registered = (ppt_hw_insts != NULL);
 }

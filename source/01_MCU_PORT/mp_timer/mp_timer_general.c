@@ -19,21 +19,21 @@ static stm32_timer_driver_t g_timer_drv = {
     .timers_user_cb     = { NULL, NULL, NULL, NULL }
 };
 
-void hal_channel_tim_cb(TIM_HandleTypeDef* htim)
+void hal_channel_tim_cb(TIM_HandleTypeDef* ppt_htim)
 {
-    volatile uint32_t* const ccrs[4] = { &htim->Instance->CCR1,
-                                &htim->Instance->CCR2,
-                                &htim->Instance->CCR3,
-                                &htim->Instance->CCR4 };
-    uint8_t idx = __builtin_ctz(htim->Channel);
+    volatile uint32_t* const ccrs[4] = { &ppt_htim->Instance->CCR1,
+                                &ppt_htim->Instance->CCR2,
+                                &ppt_htim->Instance->CCR3,
+                                &ppt_htim->Instance->CCR4 };
+    uint8_t idx = __builtin_ctz(ppt_htim->Channel);
     
     // Update CCRx first for the next interrupt
     *(ccrs[idx]) += g_timer_drv.sub_timers_periods[idx];
     
     // Check for overrun - if counter already passed the new compare value
-    if ((int32_t)(*(ccrs[idx]) - htim->Instance->CNT) < 0) {
+    if ((int32_t)(*(ccrs[idx]) - ppt_htim->Instance->CNT) < 0) {
         // Already missed next interrupt time - adjust CCR
-        *(ccrs[idx]) = htim->Instance->CNT + g_timer_drv.sub_timers_periods[idx];
+        *(ccrs[idx]) = ppt_htim->Instance->CNT + g_timer_drv.sub_timers_periods[idx];
     }
     
     // Then call user callback
@@ -68,37 +68,37 @@ static response_status_t init(void)
     return ret_val;
 }
 
-static inline HAL_StatusTypeDef OC_StartPeriodic(mp_timer_id_t p_timer_id, uint32_t ch)
+static inline HAL_StatusTypeDef oc_start_periodic(mp_timer_id_t p_timer_id, uint32_t p_ch)
 {
     HAL_StatusTypeDef  hal_ret = HAL_OK;
-    TIM_HandleTypeDef* htim    = g_timer_drv.hw_inst;
+    TIM_HandleTypeDef* pt_htim    = g_timer_drv.hw_inst;
     // 1) Mask this channel's interrupt and clear any stale flags
-    uint32_t it_bit = (ch == TIM_CHANNEL_1)   ? TIM_IT_CC1
-                      : (ch == TIM_CHANNEL_2) ? TIM_IT_CC2
-                      : (ch == TIM_CHANNEL_3) ? TIM_IT_CC3
+    uint32_t it_bit = (p_ch == TIM_CHANNEL_1)   ? TIM_IT_CC1
+                      : (p_ch == TIM_CHANNEL_2) ? TIM_IT_CC2
+                      : (p_ch == TIM_CHANNEL_3) ? TIM_IT_CC3
                                               : TIM_IT_CC4;
 
-    __HAL_TIM_DISABLE_IT(htim, it_bit);
-    __HAL_TIM_CLEAR_IT(htim, it_bit);
+    __HAL_TIM_DISABLE_IT(pt_htim, it_bit);
+    __HAL_TIM_CLEAR_IT(pt_htim, it_bit);
 
     // Optional but nice: clear any pending NVIC for this timer
     // NVIC_ClearPendingIRQ(TIM2_IRQn); // use correct IRQn for your timer
 
     // 2) Program the next compare value relative to the current counter so it's in the future
-    uint32_t next_compare = __HAL_TIM_GET_COUNTER(htim) + g_timer_drv.sub_timers_periods[p_timer_id];
-    __HAL_TIM_SET_COMPARE(htim, ch, next_compare);
+    uint32_t next_compare = __HAL_TIM_GET_COUNTER(pt_htim) + g_timer_drv.sub_timers_periods[p_timer_id];
+    __HAL_TIM_SET_COMPARE(pt_htim, p_ch, next_compare);
 
     // Edge case: if very tight, push it further to avoid immediate match
     // (use signed diff to handle wrap)
-    int32_t delta = (int32_t)(__HAL_TIM_GET_COMPARE(htim, ch) - __HAL_TIM_GET_COUNTER(htim));
+    int32_t delta = (int32_t)(__HAL_TIM_GET_COMPARE(pt_htim, p_ch) - __HAL_TIM_GET_COUNTER(pt_htim));
     if (delta <= 2)
     { // a couple of ticks margin
-        __HAL_TIM_SET_COMPARE(htim, ch, __HAL_TIM_GET_COMPARE(htim, ch) + 10);
+        __HAL_TIM_SET_COMPARE(pt_htim, p_ch, __HAL_TIM_GET_COMPARE(pt_htim, p_ch) + 10);
     }
 
     // 3) Enable channel output-compare (no output) and then its interrupt
-    hal_ret = HAL_TIM_OC_Start(htim, ch); // enables CCxE; does NOT set CCxIE
-    __HAL_TIM_ENABLE_IT(htim, it_bit);    // enable IRQ **after** CCR is set
+    hal_ret = HAL_TIM_OC_Start(pt_htim, p_ch); // enables CCxE; does NOT set CCxIE
+    __HAL_TIM_ENABLE_IT(pt_htim, it_bit);    // enable IRQ **after** CCR is set
 
     return hal_ret;
 }
@@ -113,16 +113,16 @@ static response_status_t start(mp_timer_id_t p_timer_id)
     switch (p_timer_id)
     {
         case TIMER_10US:
-            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_1);
+            hal_ret = oc_start_periodic(p_timer_id, TIM_CHANNEL_1);
             break;
         case TIMER_1MS:
-            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_2);
+            hal_ret = oc_start_periodic(p_timer_id, TIM_CHANNEL_2);
             break;
         case TIMER_10MS:
-            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_3);
+            hal_ret = oc_start_periodic(p_timer_id, TIM_CHANNEL_3);
             break;
         case TIMER_100MS:
-            hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_4);
+            hal_ret = oc_start_periodic(p_timer_id, TIM_CHANNEL_4);
             break;
         default:
             return RET_PARAM_ERROR;
@@ -160,10 +160,10 @@ static response_status_t stop(mp_timer_id_t p_timer_id)
     return translate_hal_status(hal_ret);
 }
 
-static response_status_t register_callback(mp_timer_id_t p_timer_id, void (*callback)(void))
+static response_status_t register_callback(mp_timer_id_t p_timer_id, void (*ppt_callback)(void))
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(callback == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_callback == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(p_timer_id >= TIMER_CNT, RET_NOT_SUPPORTED);
 
     CRITICAL_ENTER();
@@ -175,7 +175,7 @@ static response_status_t register_callback(mp_timer_id_t p_timer_id, void (*call
                                  HAL_TIM_OC_DELAY_ELAPSED_CB_ID,
                                  hal_channel_tim_cb);
     }
-    g_timer_drv.timers_user_cb[p_timer_id] = callback;
+    g_timer_drv.timers_user_cb[p_timer_id] = ppt_callback;
     CRITICAL_EXIT();
     return RET_OK;
 }
@@ -219,7 +219,7 @@ static uint32_t get_cpu_time(mp_timer_unit_t p_time_unit)
         case MP_TIMER_UNIT_MS:
             return HAL_GetTick();
         case MP_TIMER_UNIT_US:
-            return (uint32_t)(DWT->CYCCNT / 80u);
+            return (uint32_t)(DWT->CYCCNT / 80U);
         default:
             return 0;
     }
