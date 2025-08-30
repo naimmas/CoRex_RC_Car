@@ -11,9 +11,9 @@ static const float g_acc_A[3][3] = {
 static const float g_acc_b[3] = { 0.063981206956114f, 0.106560263265376f, -0.338901066521774f };
 
 static const float g_mag_A[3][3] = {
-    {  1.000941865753861, -0.006342268652996,  0.090698015712243 },
-    { -0.006342268652996,  1.000548758124559, -0.004594496153562 },
-    {  0.090698015712243, -0.004594496153562,  1.006785725808204 }
+    {  1.000941865753861f, -0.006342268652996f,  0.090698015712243f },
+    { -0.006342268652996f,  1.000548758124559f, -0.004594496153562f },
+    {  0.090698015712243f, -0.004594496153562f,  1.006785725808204f }
 };
 
 static const float g_mag_b[3] = { -188.8444335021131f, 78.349830134154089f, 40.446694449254487f };
@@ -35,9 +35,9 @@ void imu_apply_mounting_matrix(float* acc, float* gyro, float* mag)
     {
         for (int j = 0; j < 3; j++)
         {
-            acc_temp[i] += g_mounting_matrix[i][j] * acc[j];
-            gyro_temp[i] += g_mounting_matrix[i][j] * gyro[j];
-            mag_temp[i] += g_mounting_matrix[i][j] * mag[j];
+            acc_temp[i] += (float)(g_mounting_matrix[i][j]) * acc[j];
+            gyro_temp[i] += (float)(g_mounting_matrix[i][j]) * gyro[j];
+            mag_temp[i] += (float)(g_mounting_matrix[i][j]) * mag[j];
         }
     }
 
@@ -86,9 +86,9 @@ response_status_t imu_get_data(float* acc, float* gyro, float* mag, float* quat)
     if (ret_val == RET_OK && dd_icm209_accelDataIsReady())
     {
         dd_icm209_readAccelData(&acc[0], &acc[1], &acc[2]);
-        acc[0] *= 9.806;
-        acc[1] *= 9.806;
-        acc[2] *= 9.806;
+        acc[0] *= 9.806f;
+        acc[1] *= 9.806f;
+        acc[2] *= 9.806f;
         ret_val = RET_OK;
     }
     else
