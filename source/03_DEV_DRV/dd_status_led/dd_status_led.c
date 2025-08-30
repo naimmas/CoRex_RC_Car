@@ -4,7 +4,7 @@
 #include "ps_app_timer/ps_app_timer.h"
 #include "su_common.h"
 
-app_timer_handler_t* g_led_timer              = NULL;
+app_timer_handler_t* g_pt_g_led_timer              = NULL;
 bool_t               g_status_led_initialized = FALSE;
 
 void led_cb(void)
@@ -31,8 +31,8 @@ response_status_t dd_status_led_init(void)
 
     if (ret_val == RET_OK)
     {
-        ret_val  = ps_app_timer_create(&g_led_timer, FALSE, led_cb);
-        ret_val |= ps_app_timer_start(g_led_timer, 2000, APP_TIMER_UNIT_MS);
+        ret_val  = ps_app_timer_create(&g_pt_g_led_timer, FALSE, led_cb);
+        ret_val |= ps_app_timer_start(g_pt_g_led_timer, 2000, APP_TIMER_UNIT_MS);
     }
 
     if (ret_val == RET_OK)
@@ -50,11 +50,11 @@ response_status_t dd_status_led_init(void)
 void dd_status_led_normal(void)
 {
     ASSERT_AND_RETURN(g_status_led_initialized == FALSE, );
-    ps_app_timer_update_period(g_led_timer, 1000, APP_TIMER_UNIT_MS);
+    ps_app_timer_update_period(g_pt_g_led_timer, 1000, APP_TIMER_UNIT_MS);
 }
 
 void dd_status_led_error(void)
 {
     ASSERT_AND_RETURN(g_status_led_initialized == FALSE, );
-    ps_app_timer_update_period(g_led_timer, 500, APP_TIMER_UNIT_MS);
+    ps_app_timer_update_period(g_pt_g_led_timer, 500, APP_TIMER_UNIT_MS);
 }

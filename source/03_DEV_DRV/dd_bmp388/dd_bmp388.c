@@ -428,10 +428,9 @@ static response_status_t send_cmd(bmp388_dev_t* ppt_dev, bmp388_cmds p_cmd, uint
                 ret_val = write_register(ppt_dev, (uint8_t*)&p_cmd, DEFAULT_IIC_REG_SZ, BMP388_REG_CMD);
                 break;
             }
-            else
-            {
-                ret_val = RET_TIMEOUT;
-            }
+            
+                            ret_val = RET_TIMEOUT;
+           
         }
         max_retry_cnt--;
         ha_timer_hard_delay_ms(10U); // Wait for 10 ms before retrying

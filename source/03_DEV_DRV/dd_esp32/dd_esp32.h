@@ -4,7 +4,7 @@
 
 #include "su_common.h"
 
-union float_to_bytes
+union un_float_to_bytes
 {
     float   f;
     uint8_t bytes[sizeof(float)];
@@ -12,11 +12,11 @@ union float_to_bytes
 
 typedef struct
 {
-    union float_to_bytes acc[3];
-    union float_to_bytes gyro[3];
-    union float_to_bytes mag[3];
-    union float_to_bytes quat[4];
-    union float_to_bytes baro;
+    union un_float_to_bytes acc[3];
+    union un_float_to_bytes gyro[3];
+    union un_float_to_bytes mag[3];
+    union un_float_to_bytes quat[4];
+    union un_float_to_bytes baro;
     uint32_t             throttle_stick;
     uint32_t             steering_stick;
 } dd_esp32_data_packet_t;

@@ -23,9 +23,9 @@ fsi6_device_t g_fsi6_dev = { .initialized = FALSE, .waiting_for_data = FALSE, .c
     [INPUT_CAPTURE_CHANNEL_2] = FSI6_IN_R_S_LR,
 } , .timeout_handler = NULL, .timeout_occurred = FALSE };
 
-static input_capture_channel_t in2ch(fsi6_inputs_t input)
+static input_capture_channel_t in2ch(fsi6_inputs_t p_input)
 {
-    switch (input)
+    switch (p_input)
     {
         case FSI6_IN_L_S_UD:
             return INPUT_CAPTURE_CHANNEL_1;
@@ -41,11 +41,11 @@ void timeout_cb(void)
     g_fsi6_dev.timeout_occurred = TRUE;
 }
 
-void ic_api_cb(input_capture_channel_t channel, uint32_t value)
+void ic_api_cb(input_capture_channel_t p_channel, uint32_t p_value)
 {
     if (g_fsi6_dev.initialized)
     {
-        g_fsi6_dev.value[g_fsi6_dev.channel_to_in[channel]] = value;
+        g_fsi6_dev.value[g_fsi6_dev.channel_to_in[p_channel]] = p_value;
         g_fsi6_dev.waiting_for_data                         = FALSE;
     }
     else
@@ -94,28 +94,28 @@ response_status_t dd_fsi6_init(bool_t p_isr)
     return ret_val;
 }
 
-response_status_t dd_fsi6_get_data(fsi6_inputs_t input, uint32_t* value)
+response_status_t dd_fsi6_get_data(fsi6_inputs_t p_input, uint32_t* ppt_value)
 {
-    ASSERT_AND_RETURN(value == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_value == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(g_fsi6_dev.initialized == FALSE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(input >= FSI6_IN_CNT, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_input >= FSI6_IN_CNT, RET_PARAM_ERROR);
 
-    *value = g_fsi6_dev.value[input];
+    *ppt_value = g_fsi6_dev.value[p_input];
 
     return RET_OK;
 
 }
 
-response_status_t dd_fsi6_read_input(fsi6_inputs_t input, uint32_t* value)
+response_status_t dd_fsi6_read_input(fsi6_inputs_t p_input, uint32_t* ppt_value)
 {
-    ASSERT_AND_RETURN(value == NULL, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(ppt_value == NULL, RET_PARAM_ERROR);
     ASSERT_AND_RETURN(g_fsi6_dev.initialized == FALSE, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(input >= FSI6_IN_CNT, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_input >= FSI6_IN_CNT, RET_PARAM_ERROR);
 
     response_status_t ret_val       = RET_OK;
     g_fsi6_dev.waiting_for_data     = TRUE;
     g_fsi6_dev.timeout_occurred     = FALSE;
-    input_capture_channel_t channel = in2ch(input);
+    input_capture_channel_t channel = in2ch(p_input);
 
     if (ret_val == RET_OK)
     {
@@ -137,18 +137,18 @@ response_status_t dd_fsi6_read_input(fsi6_inputs_t input, uint32_t* value)
     {
         // Error occurred
         g_fsi6_dev.waiting_for_data = FALSE;
-        *value                      = 0; // Return 0 if error occurred
+        *ppt_value                      = 0; // Return 0 if error occurred
     }
     else if (g_fsi6_dev.timeout_occurred == TRUE)
     {
         ret_val = RET_TIMEOUT;
         // ha_input_capture_abort(channel);
-        *value                      = 0; // Return 0 if timeout occurred
+        *ppt_value                      = 0; // Return 0 if timeout occurred
         g_fsi6_dev.waiting_for_data = FALSE;
     }
     else
     {
-        *value                      = g_fsi6_dev.value[g_fsi6_dev.channel_to_in[channel]];
+        *ppt_value                      = g_fsi6_dev.value[g_fsi6_dev.channel_to_in[channel]];
         g_fsi6_dev.waiting_for_data = FALSE;
         ret_val                     = RET_OK;
     }
