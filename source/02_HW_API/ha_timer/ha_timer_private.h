@@ -1,20 +1,13 @@
 #ifndef HA_TIMER_PRIVATE_H
 #define HA_TIMER_PRIVATE_H
 
+#include "ha_timer.h"
 #include "stddef.h"
 #include "stdint.h"
 #include "su_common.h"
 
 typedef struct st_timer_driver_ifc* timer_driver_ifc;
-
-typedef enum
-{
-    MP_TIMER_10US_ID = 0,
-    MP_TIMER_1MS_ID,
-    MP_TIMER_10MS_ID,
-    MP_TIMER_100MS_ID,
-    MP_TIMER_CNT
-} mp_timer_id_t;
+typedef gp_timers_t mp_timer_id_t;
 
 typedef enum
 {

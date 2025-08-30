@@ -1,4 +1,3 @@
-
 #include "mp_timer_general.h"
 
 #include "main.h"
@@ -9,8 +8,8 @@ typedef struct st_stm32_timer_driver
 {
     timer_driver_t     base;
     TIM_HandleTypeDef* hw_inst;
-    uint32_t           sub_timers_periods[MP_TIMER_CNT];
-    void (*timers_user_cb[MP_TIMER_CNT])(void);
+    uint32_t           sub_timers_periods[TIMER_CNT];
+    void (*timers_user_cb[TIMER_CNT])(void);
 } stm32_timer_driver_t;
 
 static stm32_timer_driver_t g_timer_drv = {
@@ -23,12 +22,21 @@ static stm32_timer_driver_t g_timer_drv = {
 void hal_channel_tim_cb(TIM_HandleTypeDef* htim)
 {
     volatile uint32_t* const ccrs[4] = { &htim->Instance->CCR1,
-                                         &htim->Instance->CCR2,
-                                         &htim->Instance->CCR3,
-                                         &htim->Instance->CCR4 };
-    uint8_t                  idx     = __builtin_ctz(htim->Channel);
-
+                                &htim->Instance->CCR2,
+                                &htim->Instance->CCR3,
+                                &htim->Instance->CCR4 };
+    uint8_t idx = __builtin_ctz(htim->Channel);
+    
+    // Update CCRx first for the next interrupt
     *(ccrs[idx]) += g_timer_drv.sub_timers_periods[idx];
+    
+    // Check for overrun - if counter already passed the new compare value
+    if ((int32_t)(*(ccrs[idx]) - htim->Instance->CNT) < 0) {
+        // Already missed next interrupt time - adjust CCR
+        *(ccrs[idx]) = htim->Instance->CNT + g_timer_drv.sub_timers_periods[idx];
+    }
+    
+    // Then call user callback
     if (g_timer_drv.timers_user_cb[idx] != NULL)
     {
         g_timer_drv.timers_user_cb[idx]();
@@ -76,12 +84,12 @@ static inline HAL_StatusTypeDef OC_StartPeriodic(mp_timer_id_t p_timer_id, uint3
     // Optional but nice: clear any pending NVIC for this timer
     // NVIC_ClearPendingIRQ(TIM2_IRQn); // use correct IRQn for your timer
 
-    // 2) Program the first compare **relative to now** so it's in the future
-    uint32_t first = __HAL_TIM_GET_COUNTER(htim) + g_timer_drv.sub_timers_periods[p_timer_id];
-    __HAL_TIM_SET_COMPARE(htim, ch, first);
+    // 2) Program the next compare value relative to the current counter so it's in the future
+    uint32_t next_compare = __HAL_TIM_GET_COUNTER(htim) + g_timer_drv.sub_timers_periods[p_timer_id];
+    __HAL_TIM_SET_COMPARE(htim, ch, next_compare);
 
-    // // Edge case: if very tight, push it further to avoid immediate match
-    // // (use signed diff to handle wrap)
+    // Edge case: if very tight, push it further to avoid immediate match
+    // (use signed diff to handle wrap)
     int32_t delta = (int32_t)(__HAL_TIM_GET_COMPARE(htim, ch) - __HAL_TIM_GET_COUNTER(htim));
     if (delta <= 2)
     { // a couple of ticks margin
@@ -98,22 +106,22 @@ static inline HAL_StatusTypeDef OC_StartPeriodic(mp_timer_id_t p_timer_id, uint3
 static response_status_t start(mp_timer_id_t p_timer_id)
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_timer_id >= TIMER_CNT, RET_PARAM_ERROR);
 
     HAL_StatusTypeDef hal_ret = HAL_OK;
 
     switch (p_timer_id)
     {
-        case MP_TIMER_10US_ID:
+        case TIMER_10US:
             hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_1);
             break;
-        case MP_TIMER_1MS_ID:
+        case TIMER_1MS:
             hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_2);
             break;
-        case MP_TIMER_10MS_ID:
+        case TIMER_10MS:
             hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_3);
             break;
-        case MP_TIMER_100MS_ID:
+        case TIMER_100MS:
             hal_ret = OC_StartPeriodic(p_timer_id, TIM_CHANNEL_4);
             break;
         default:
@@ -126,29 +134,25 @@ static response_status_t start(mp_timer_id_t p_timer_id)
 static response_status_t stop(mp_timer_id_t p_timer_id)
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
-    ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_PARAM_ERROR);
+    ASSERT_AND_RETURN(p_timer_id >= TIMER_CNT, RET_PARAM_ERROR);
 
     HAL_StatusTypeDef hal_ret = HAL_OK;
 
     switch (p_timer_id)
     {
-        case MP_TIMER_10US_ID:
+        case TIMER_10US:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_1);
-            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC1);
             break;
-        case MP_TIMER_1MS_ID:
+        case TIMER_1MS:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_2);
-            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC2);
             break;
-        case MP_TIMER_10MS_ID:
+        case TIMER_10MS:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_3);
-            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC3);
             break;
-        case MP_TIMER_100MS_ID:
+        case TIMER_100MS:
             hal_ret = HAL_TIM_OC_Stop_IT(g_timer_drv.hw_inst, TIM_CHANNEL_4);
-            // __HAL_TIM_CLEAR_IT(g_timer_drv.hw_inst, TIM_IT_CC4);
-
-        case MP_TIMER_CNT:
+            break;
+        case TIMER_CNT:
         default:
             return RET_PARAM_ERROR;
     }
@@ -160,7 +164,7 @@ static response_status_t register_callback(mp_timer_id_t p_timer_id, void (*call
 {
     ASSERT_AND_RETURN(g_timer_drv.hw_inst == NULL, RET_NOT_INITIALIZED);
     ASSERT_AND_RETURN(callback == NULL, RET_PARAM_ERROR);
-    ASSERT_AND_RETURN(p_timer_id >= MP_TIMER_CNT, RET_NOT_SUPPORTED);
+    ASSERT_AND_RETURN(p_timer_id >= TIMER_CNT, RET_NOT_SUPPORTED);
 
     CRITICAL_ENTER();
     // If it's the first time we register a callback for this timer, we need to register the HAL
@@ -223,13 +227,14 @@ static uint32_t get_cpu_time(mp_timer_unit_t p_time_unit)
 
 static void hard_delay(uint32_t p_delay, mp_timer_unit_t p_delay_unit)
 {
+    uint32_t t0 = 0;
     switch (p_delay_unit)
     {
         case MP_TIMER_UNIT_MS:
             HAL_Delay(p_delay);
             break;
         case MP_TIMER_UNIT_US:
-            uint32_t t0 = get_cpu_time(MP_TIMER_UNIT_US);
+            t0 = get_cpu_time(MP_TIMER_UNIT_US);
             while ((uint32_t)(get_cpu_time(MP_TIMER_UNIT_US) - t0) < p_delay)
             {
                 __NOP();
