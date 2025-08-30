@@ -27,6 +27,12 @@ pipeline {
                 script {
                     sh "make cont-build BUILD_TYPE=${BUILD_TYPE}"
                 }
+                recordIssues(
+                    name: "build ${BUILD_TYPE}",
+                    enabledForFailure: true,
+                    tools: [gcc(pattern: "build/**/build_${BUILD_TYPE}.log")],
+                    id: "gcc-${BUILD_TYPE}"
+                )
             }
         }
 
@@ -37,6 +43,17 @@ pipeline {
                     sh 'cp build/artifacts/gcov/junit_tests_report.xml build/logs/junit_tests_report.xml'
                     sh 'cp build/artifacts/gcov/gcovr/TestCoverageReport.xml build/logs/TestCoverageReport.xml'
                 }
+                junit(
+                testResults: 'build/logs/junit_tests_report.xml',
+                allowEmptyResults: true,
+                keepTestNames: true,
+                )
+                recordCoverage(
+                    tools: [
+                        [parser: 'COBERTURA',
+                        pattern: 'build/logs/TestCoverageReport.xml']
+                    ]
+                )
             }
         }
 
@@ -45,6 +62,27 @@ pipeline {
                 script {
                     sh "make cont-analyse-all BUILD_TYPE=${BUILD_TYPE}"
                 }
+
+                recordIssues(
+                        name: 'Lizard',
+                        enabledForFailure: true,
+                        tools: [gcc(
+                        pattern: 'build/logs/liz_warns.log')
+                    ]
+                )
+                publishHTML(
+                    target: [allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'build/logs',
+                    reportFiles: 'liz_report.html',
+                    reportName: 'Lizard Report']
+                )
+                recordIssues(
+                    name: 'Static Analyse',
+                    enabledForFailure: true,
+                    tool: clangTidy(pattern: "build/source/${BUILD_TYPE}/clang-tidy.txt")
+                )
             }
         }
 
@@ -53,55 +91,12 @@ pipeline {
                 script {
                     sh 'make cont-analyse-flaws'
                 }
+                recordIssues(
+                    tools: [flawfinder(
+                    id: 'flawfinder',
+                    pattern: 'build/logs/ff_report.log',)],
+                )
             }
-        }
-    }
-
-    post {
-        success {
-            recordIssues(
-        name: "build ${BUILD_TYPE}",
-        enabledForFailure: true,
-        tools: [gcc(pattern: "build/**/build_${BUILD_TYPE}.log")],
-        id: "gcc-${BUILD_TYPE}"
-      )
-            junit(
-        testResults: 'build/logs/junit_tests_report.xml',
-        allowEmptyResults: true,
-        keepTestNames: true,
-      )
-            recordCoverage(
-        tools: [
-          [parser: 'COBERTURA',
-            pattern: 'build/logs/TestCoverageReport.xml'
-          ]
-        ]
-      )
-            recordIssues(
-        tools: [flawfinder(
-          id: 'flawfinder',
-          pattern: 'build/logs/ff_report.log',
-        )],
-      )
-            publishHTML(
-        target: [allowMissing: false,
-          alwaysLinkToLastBuild: true,
-          keepAll: true,
-          reportDir: 'build/logs',
-          reportFiles: 'liz_report.html',
-          reportName: 'Lizard Report'
-        ])
-            recordIssues(
-        name: 'Lizard',
-        enabledForFailure: true,
-        tools: [gcc(
-          pattern: 'build/logs/liz_warns.log')]
-      )
-            recordIssues(
-        name: 'Static Analyse',
-        enabledForFailure: true,
-        tool: clangTidy(pattern: "build/source/${BUILD_TYPE}/clang-tidy.txt")
-      )
         }
     }
 }
