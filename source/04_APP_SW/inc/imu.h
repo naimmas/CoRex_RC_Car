@@ -9,4 +9,4 @@ typedef enum
 } imu_sens_type_t;
 
 response_status_t imu_init();
-response_status_t imu_get_data(float* acc, float* gyro, float* mag, float* quat);
+response_status_t imu_get_data(float* ppt_acc, float* ppt_gyro, float* ppt_mag, float* ppt_quat);

@@ -21,20 +21,21 @@
         app_err_handler(); \
     }
 
-app_timer_handler_t* g_esp32_msg_timer = NULL;
+app_timer_handler_t* g_pt_g_esp32_msg_timer = NULL;
 
-int32_t MAP(int32_t au32_IN, int32_t au32_INmin, int32_t au32_INmax, int32_t au32_OUTmin,
-            int32_t au32_OUTmax)
+int32_t map(int32_t p_au32_in, int32_t p_au32_i_nmin, int32_t p_au32_i_nmax, int32_t p_au32_ou_tmin,
+            int32_t p_au32_ou_tmax)
 {
-    return ((((au32_IN - au32_INmin) * (au32_OUTmax - au32_OUTmin)) / (au32_INmax - au32_INmin))
-            + au32_OUTmin);
+    return ((((p_au32_in - p_au32_i_nmin) * (p_au32_ou_tmax - p_au32_ou_tmin)) / (p_au32_i_nmax - p_au32_i_nmin))
+            + p_au32_ou_tmin);
 }
 
 void app_err_handler(void)
 {
     dd_status_led_error();
-    while (1)
+    while (1) {
         ;
+}
 }
 
 int app(void)
@@ -48,7 +49,7 @@ int app(void)
     ps_scan_iic_bus();
     ps_app_timer_init();
 
-    ret_val = ps_app_timer_create(&g_esp32_msg_timer, TRUE, NULL);
+    ret_val = ps_app_timer_create(&g_pt_g_esp32_msg_timer, TRUE, NULL);
     CHECK_APP_ERR_LOG(ret_val, "Error creating ESP32 message timer\n");
 
     ret_val = dd_status_led_init();
@@ -69,7 +70,7 @@ int app(void)
     dd_esp32_data_packet_t data_msg = { 0 };
     bool_t                 send_msg = FALSE;
 
-    ps_app_timer_start(g_esp32_msg_timer, 50, APP_TIMER_UNIT_MS);
+    ps_app_timer_start(g_pt_g_esp32_msg_timer, 50, APP_TIMER_UNIT_MS);
     dd_status_led_normal();
     while (1)
     {
@@ -82,16 +83,16 @@ int app(void)
         dd_fsi6_get_data(FSI6_IN_L_S_UD, &data_msg.throttle_stick);
         dd_fsi6_get_data(FSI6_IN_R_S_LR, &data_msg.steering_stick);
 
-        if (ret_val == RET_OK && g_esp32_msg_timer->is_fired == TRUE)
+        if (ret_val == RET_OK && g_pt_g_esp32_msg_timer->is_fired == TRUE)
         {
-            g_esp32_msg_timer->is_fired = FALSE;
+            g_pt_g_esp32_msg_timer->is_fired = FALSE;
             LOG_INFO("DATA OK\n");
             ret_val = dd_esp32_send_data_packet(&data_msg);
             if (ret_val != RET_OK)
             {
                 LOG_ERR("Error sending data packet to ESP32\n");
             }
-            ps_app_timer_start(g_esp32_msg_timer,
+            ps_app_timer_start(g_pt_g_esp32_msg_timer,
                                50,
                                APP_TIMER_UNIT_MS); // Restart timer for next message
         }
