@@ -2,9 +2,9 @@
 
 #include "ha_timer/ha_timer.h"
 #include "ha_uart/ha_uart.h"
+#include "stdio.h"
 #include "string.h"
 #include "su_common.h"
-#include "stdio.h"
 
 #define USER_DATA_SIZE (sizeof(dd_esp32_data_packet_t)/sizeof(uint8_t))
 
@@ -60,7 +60,6 @@ response_status_t dd_esp32_send_data_packet(dd_esp32_data_packet_t* ppt_data_pac
     }
 
     response_status_t ret_val               = RET_OK;
-    uint32_t          time_stamp            = ha_timer_get_cpu_time_ms();
     char              data_packet_str[2048] = { 0 };
     size_t            wb                    = snprintf(data_packet_str,
                          2048,
