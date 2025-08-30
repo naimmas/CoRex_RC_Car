@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0079 NEW)
 
-# Allow user to choose MCU platform (default: stm32)
-
-# option(MCU_TARGET "Target MCU (stm32, rp2040, etc.)" "rp2040")
-# message(STATUS "MCU target selected: ${MCU_TARGET}")
-
 # Select proper toolchain and MCU setup
 set(MCU_LAYER_DIR ${CMAKE_SOURCE_DIR}/00_MCU_SDK)
 
