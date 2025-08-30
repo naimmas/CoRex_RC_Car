@@ -8,7 +8,7 @@ ASM_OUT ?= OFF
 PLATFORM = $(if $(OS),$(OS),$(shell uname -s))
 FIRMWARE = $(BUILD_DIR)/$(PROJECT_NAME).bin
 
-BUILD_LOG := $(LOGS_DIR)/build_$(MCU)_$(BUILD_TYPE).log
+BUILD_LOG := $(LOGS_DIR)/build_$(BUILD_TYPE).log
 
 ifeq ($(PLATFORM),Windows_NT)
     BUILD_SYSTEM ?= MinGW Makefiles
@@ -28,7 +28,6 @@ $(BUILD_DIR)/Makefile: $(SRC_DIR)/CMakeLists.txt
 		-S $(SRC_DIR) \
 		-G "$(BUILD_SYSTEM)" \
 		-B$(BUILD_DIR) \
-		-DMCU_TARGET=$(MCU) \
 		-DPROJECT_NAME=$(PROJECT_NAME) \
 		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
